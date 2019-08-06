@@ -42,7 +42,7 @@ import java.util.List;
 
 import org.testng.annotations.Test;
 
-public class IntervalStoreTest
+public class NoNCListIntervalStoreTest
 {
   @Test(enabled = true) // groups = "functional")
   public void testConstructor_noNesting()
