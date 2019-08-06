@@ -56,6 +56,11 @@ import org.testng.annotations.Test;
  * <li>other columns compute derived values from raw data</li>
  * </ul>
  * 
+ * 
+ * Modified by Bob Hanson to provide three orders of magnitude in N, truncate
+ * the loop if the process is taking too long, and include a sort for Naive
+ * load. *
+ * 
  * @author gmcarstairs
  */
 // this is a long running test (c 1 hr) so normally left disabled
