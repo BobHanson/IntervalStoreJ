@@ -1,0 +1,130 @@
+TimingTest2 (NCList) 
+
+[RemoteTestNG] detected TestNG version 6.14.2
+Java version: 1.8.0_191
+amd64 Windows 10 10.0
+
+Test      	size N	iteration	ms	N/ms	ms stderr	rate stderr
+IntervalStore bulk load	2154	10	2.2	1095.0	0.25	132.31
+IntervalStore bulk load	4641	10	5.9	938.4	1.17	92.48
+IntervalStore bulk load	10000	10	7.6	1390.1	0.54	116.94
+IntervalStore bulk load	21544	10	10.8	2055.0	0.66	109.70
+IntervalStore bulk load	46415	10	32.6	1486.1	2.17	106.16
+IntervalStore bulk load	100000	10	42.5	2397.3	1.99	106.29
+IntervalStore bulk load	215443	10	93.8	2319.6	3.38	70.36
+IntervalStore bulk load	464158	10	235.4	1986.8	7.02	56.07
+IntervalStore incr	2154	10	2.2	1005.2	0.13	47.87
+IntervalStore incr	4641	10	6.7	703.5	0.30	27.15
+IntervalStore incr	10000	10	11.9	879.7	0.89	59.00
+IntervalStore incr	21544	10	38.6	582.0	2.47	41.92
+IntervalStore incr	46415	10	94.8	499.6	4.40	24.04
+IntervalStore incr	100000	10	196.4	509.2	0.76	1.95
+IntervalStore incr	215443	10	757.9	285.2	14.79	5.33
+IntervalStore incr	464158	10	3001.4	155.1	51.76	2.60
+IntervalStore no duplicates	2154	10	1.5	1292.4	0.22	215.40
+IntervalStore no duplicates	4641	10	2.7	1817.7	0.21	141.81
+IntervalStore no duplicates	10000	10	8.4	1249.2	0.54	103.71
+IntervalStore no duplicates	21544	10	15.6	1389.4	0.43	34.01
+IntervalStore no duplicates	46415	10	48.3	966.1	1.27	21.85
+IntervalStore no duplicates	100000	10	215.3	496.1	19.47	39.94
+IntervalStore no duplicates	215443	10	612.3	354.2	17.53	9.15
+IntervalStore no duplicates	464158	10	2596.0	179.1	35.46	2.42
+Naive bulk load	2154	10	2.9	771.9	0.18	53.85
+Naive bulk load	4641	10	3.6	1330.4	0.22	75.44
+Naive bulk load	10000	10	2.1	6450.0	0.43	1023.20
+Naive bulk load	21544	10	3.8	5745.1	0.13	239.38
+Naive bulk load	46415	10	10.6	4534.4	0.70	262.87
+Naive bulk load	100000	10	20.4	4907.3	0.22	54.44
+Naive bulk load	215443	10	49.8	4327.5	0.29	25.08
+Naive bulk load	464158	10	126.2	3679.1	0.74	21.08
+Naive no duplicates	2154	10	2.3	969.3	0.15	54.84
+Naive no duplicates	4641	10	10.1	460.8	0.18	8.24
+Naive no duplicates	10000	10	49.9	200.5	0.31	1.28
+Naive no duplicates	21544	10	271.0	79.7	4.60	1.38
+Naive no duplicates	46415	10	1204.1	38.7	25.36	0.78
+NCList bulk load	2154	10	0.6	1292.4	0.16	351.75
+NCList bulk load	4641	10	1.1	4409.0	0.10	232.05
+NCList bulk load	10000	10	2.5	4166.7	0.17	277.78
+NCList bulk load	21544	10	6.2	3500.9	0.20	89.77
+NCList bulk load	46415	10	14.1	3318.2	0.46	90.54
+NCList bulk load	100000	10	33.2	3015.1	0.36	31.15
+NCList bulk load	215443	10	92.9	2396.9	6.40	125.67
+NCList bulk load	464158	10	254.8	2005.4	37.14	143.20
+NCList incr	2154	10	1.4	1723.2	0.16	175.87
+NCList incr	4641	10	3.3	1431.0	0.15	59.08
+NCList incr	10000	10	8.0	1260.7	0.26	37.29
+NCList incr	21544	10	21.6	1004.6	0.64	27.35
+NCList incr	46415	10	66.5	698.1	0.27	2.82
+NCList incr	100000	10	189.0	529.1	0.54	1.52
+NCList incr	215443	10	719.2	300.9	15.97	6.57
+NCList incr	464158	10	2753.4	168.8	31.43	1.90
+IntervalStore query	2154	10	0.8	1400.1	0.20	323.10
+IntervalStore query	4641	10	1.3	3944.9	0.15	354.46
+IntervalStore query	10000	10	2.5	4166.7	0.17	277.78
+IntervalStore query	21544	10	6.3	3436.8	0.15	78.35
+IntervalStore query	46415	10	15.8	2941.9	0.20	37.20
+IntervalStore query	100000	10	43.5	2301.1	0.45	24.22
+IntervalStore query	215443	10	146.9	1480.0	4.50	49.13
+IntervalStore query	464158	10	425.8	1094.2	8.55	22.72
+Naive query	2154	10	24.3	88.7	0.15	0.55
+Naive query	4641	10	107.1	43.4	1.66	0.66
+Naive query	10000	10	511.1	19.6	9.84	0.37
+Naive query	21544	10	2337.0	9.2	29.34	0.11
+NCList query	2154	10	3.1	27.8	2.07	18.56
+NCList query	4641	10	1.6	29.0	1.60	29.01
+NCList query	10000	10	2.6	162.5	1.79	111.88
+NCList query	21544	10	11.0	2046.7	1.00	107.72
+NCList query	46415	10	31.0	1508.5	1.00	38.68
+NCList query	100000	10	84.0	1194.4	1.63	22.68
+NCList query	215443	10	240.8	916.5	10.85	54.68
+NCList query	464158	10	660.3	712.6	24.28	29.37
+IntervalStore remove	2154	10	2.0	43.1	1.33	28.72
+IntervalStore remove	4641	10	0.0	0.0	0.00	0.00
+IntervalStore remove	10000	10	0.0	0.0	0.00	0.00
+IntervalStore remove	21544	10	0.0	0.0	0.00	0.00
+IntervalStore remove	46415	10	1.0	464.2	1.00	464.15
+IntervalStore remove	100000	10	2.0	2000.0	1.33	1333.33
+IntervalStore remove	215443	10	4.7	4129.3	2.39	2103.97
+IntervalStore remove	464158	10	9.1	18372.9	2.48	5003.94
+NCList remove	2154	10	1.6	13.5	1.60	13.46
+NCList remove	4641	10	0.0	0.0	0.00	0.00
+NCList remove	10000	10	1.5	66.7	1.50	66.67
+NCList remove	21544	10	0.0	0.0	0.00	0.00
+NCList remove	46415	10	3.1	599.5	2.07	399.94
+NCList remove	100000	10	3.1	1291.7	2.07	861.67
+NCList remove	215443	10	5.0	10772.2	1.67	3590.72
+NCList remove	464158	10	6.3	11797.3	2.57	4819.48
+ArrayList remove	2154	10	0.0	0.0	0.00	0.00
+ArrayList remove	4641	10	0.0	0.0	0.00	0.00
+ArrayList remove	10000	10	0.0	0.0	0.00	0.00
+ArrayList remove	21544	10	0.0	0.0	0.00	0.00
+ArrayList remove	46415	10	3.1	599.5	2.07	399.94
+ArrayList remove	100000	10	6.3	2541.7	2.57	1038.33
+ArrayList remove	215443	10	12.5	11041.5	2.09	1844.80
+ArrayList remove	464158	10	28.3	17639.9	2.06	1896.20
+
+PASSED: testLoadTime_intervalstore_bulkLoad
+PASSED: testLoadTime_intervalstore_incremental
+PASSED: testLoadTime_intervalstore_incrementalNoDuplicates
+PASSED: testLoadTime_naiveList_bulkLoad
+PASSED: testLoadTime_naiveList_noDuplicates
+PASSED: testLoadTime_nclist_bulkLoad
+PASSED: testLoadTime_nclist_incremental
+PASSED: testQueryTime_intervalstore
+PASSED: testQueryTime_naive
+PASSED: testQueryTime_nclist
+PASSED: testRemoveTime_intervalstore
+PASSED: testRemoveTime_nclist
+PASSED: testRemove_ArrayList
+
+===============================================
+    Default test
+    Tests run: 13, Failures: 0, Skips: 0
+===============================================
+
+
+===============================================
+Default suite
+Total tests run: 13, Failures: 0, Skips: 0
+===============================================
+
