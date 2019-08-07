@@ -59,8 +59,7 @@ import java.util.List;
  *          <code>getContainedBy()</code>, and <code>setContainedBy()</code>
  */
 public class IntervalStore<T extends IntervalI>
-        extends AbstractCollection<T>
-        implements IntervalStoreI<T>
+        extends AbstractCollection<T> implements IntervalStoreI<T>
 {
 
   private final boolean DO_PRESORT;
@@ -169,7 +168,9 @@ public class IntervalStore<T extends IntervalI>
     if (isTainted && intervals.size() >= 2)
     {
       if (!isSorted)
+      {
         sort();
+      }
       orderedIntervalStarts = intervals.toArray(new IntervalI[0]);
       linkFeatures(orderedIntervalStarts);
       isTainted = false;
@@ -259,7 +260,7 @@ public class IntervalStore<T extends IntervalI>
     }
   }
 
-  @SuppressWarnings("unchecked")
+
   @Override
   public List<T> findOverlaps(long start, long end)
   {
@@ -385,7 +386,9 @@ public class IntervalStore<T extends IntervalI>
       T element = intervals.get(i);
       IntervalI container = element;
       if (element.getContainedBy() == null)
+      {
         root = element;
+      }
       int depth = 1;
       while ((container = container.getContainedBy()) != null)
       {
@@ -424,7 +427,9 @@ public class IntervalStore<T extends IntervalI>
   {
     int n = features.length;
     if (n < 2)
+    {
       return;
+    }
     int maxEnd = features[0].getEnd();
     for (int i = 1; i < n; i++)
     {
@@ -490,7 +495,9 @@ public class IntervalStore<T extends IntervalI>
   public synchronized boolean remove(Object o)
   {
     // if (o == null)
+    // {
     // throw new NullPointerException();
+    // }
     return (o != null && intervals.size() > 0
             && removeInterval((IntervalI) o));
   }
@@ -503,6 +510,11 @@ public class IntervalStore<T extends IntervalI>
    */
   protected boolean removeInterval(IntervalI entry)
   {
+    if (!isSorted)
+    {
+      return intervals.remove(entry);
+    }
+
     /*
      * find the first interval that might match, i.e. whose 
      * start position is not less than the target range start
@@ -549,8 +561,12 @@ public class IntervalStore<T extends IntervalI>
     ensureFinalized();
     int w = 0;
     for (int i = intervals.size(); --i >= 0;)
+    {
       if (intervals.get(i).getContainedBy() == null)
+      {
         w++;
+      }
+    }
     return w;
   }
 
@@ -559,9 +575,13 @@ public class IntervalStore<T extends IntervalI>
   {
     int n = intervals.size();
     if (n == 0)
+    {
       return "";
+    }
     if (n == 1)
+    {
       return intervals.get(0) + "\n";
+    }
     ensureFinalized();
     String sep = "\t";
     StringBuffer sb = new StringBuffer();
