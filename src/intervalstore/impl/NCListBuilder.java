@@ -120,7 +120,7 @@ public class NCListBuilder<T extends IntervalI>
     IntervalI lastParent = ranges.get(0);
     boolean first = true;
   
-    for (int i = 0; i < ranges.size(); i++)
+    for (int i = 0, n = ranges.size(); i < n; i++)
     {
       IntervalI nextInterval = ranges.get(i);
       if (!first && !lastParent.properlyContainsInterval(nextInterval))

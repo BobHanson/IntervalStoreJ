@@ -380,7 +380,7 @@ public class NCList<T extends IntervalI> extends AbstractCollection<T>
 
     int to = interval.getEnd();
 
-    for (int i = candidateIndex; i < subranges.size(); i++)
+    for (int i = candidateIndex, n = subranges.size(); i < n; i++)
     {
       NCNode<T> candidate = subranges.get(i);
       if (candidate.getBegin() > to)
@@ -454,7 +454,7 @@ public class NCList<T extends IntervalI> extends AbstractCollection<T>
    * @param to
    * @param result
    */
-  protected void findOverlaps(long from, long to, List<T> result)
+  protected List<T> findOverlaps(long from, long to, List<T> result)
   {
     /*
      * find the first sublist that might overlap, i.e. 
@@ -462,7 +462,7 @@ public class NCList<T extends IntervalI> extends AbstractCollection<T>
      */
     int candidateIndex = findFirstOverlap(from);
 
-    for (int i = candidateIndex; i < subranges.size(); i++)
+    for (int i = candidateIndex, n = subranges.size(); i < n; i++)
     {
       NCNode<T> candidate = subranges.get(i);
       if (candidate.getBegin() > to)
@@ -474,7 +474,7 @@ public class NCList<T extends IntervalI> extends AbstractCollection<T>
       }
       candidate.findOverlaps(from, to, result);
     }
-
+    return result;
   }
 
   /**

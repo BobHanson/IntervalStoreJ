@@ -256,7 +256,7 @@ public class IntervalStore<T extends IntervalI>
 
     if (nested != null)
     {
-      result.addAll(nested.findOverlaps(from, to));
+      nested.findOverlaps(from, to, result);
     }
 
     return result;
@@ -483,21 +483,17 @@ public class IntervalStore<T extends IntervalI>
      */
     int startIndex = BinarySearcher.findFirst(nonNested,
             val -> val.getEnd() >= from);
-
-    final int startIndex1 = startIndex;
-    int i = startIndex1;
-    while (i < nonNested.size())
+    for (int i = startIndex, n = nonNested.size(); i < n; i++)
     {
       T sf = nonNested.get(i);
       if (sf.getBegin() > to)
       {
         break;
       }
-      if (sf.getBegin() <= to && sf.getEnd() >= from)
+      if (sf.getEnd() >= from)
       {
         result.add(sf);
       }
-      i++;
     }
   }
 
