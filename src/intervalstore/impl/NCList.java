@@ -488,8 +488,8 @@ public class NCList<T extends IntervalI> extends AbstractCollection<T>
    */
   protected int findFirstOverlap(final long from)
   {
-    return BinarySearcher.findFirst(subranges,
-            val -> val.getEnd() >= from);
+    return BinarySearcher.findFirst(subranges, (int) from,
+            BinarySearcher.fend);
   }
 
   /**

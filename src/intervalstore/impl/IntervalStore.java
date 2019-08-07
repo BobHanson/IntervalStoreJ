@@ -215,7 +215,8 @@ public class IntervalStore<T extends IntervalI>
        * find the first stored interval which doesn't precede the new one
        */
       int insertPosition = BinarySearcher.findFirst(nonNested,
-              val -> val.getBegin() >= entry.getBegin());
+              entry.getBegin(),
+              BinarySearcher.fbegin);
       /*
        * fail if we detect interval enclosure 
        * - of the new interval by the one before or after it
@@ -223,7 +224,8 @@ public class IntervalStore<T extends IntervalI>
        */
       if (insertPosition > 0)
       {
-        if (nonNested.get(insertPosition - 1).properlyContainsInterval(entry))
+        if (nonNested.get(insertPosition - 1)
+                .properlyContainsInterval(entry))
         {
           return false;
         }
@@ -357,13 +359,14 @@ public class IntervalStore<T extends IntervalI>
      * start position is not less than the target range start
      * (NB inequality test ensures the first match if any is found)
      */
-    int startIndex = BinarySearcher.findFirst(nonNested,
-            val -> val.getBegin() >= entry.getBegin());
+    int from = entry.getBegin();
+    int startIndex = BinarySearcher.findFirst(nonNested, from,
+            BinarySearcher.fbegin);
 
     /*
      * traverse intervals to look for a match
      */
-    int from = entry.getBegin();
+
     int i = startIndex;
     int size = nonNested.size();
     while (i < size)
@@ -428,13 +431,14 @@ public class IntervalStore<T extends IntervalI>
     /*
      * locate the first entry in the list which does not precede the interval
      */
-    int pos = BinarySearcher.findFirst(intervals,
-            val -> val.getBegin() >= interval.getBegin());
+    int from = interval.getBegin();
+    int pos = BinarySearcher.findFirst(intervals, from,
+            BinarySearcher.fbegin);
     int len = intervals.size();
     while (pos < len)
     {
       T sf = intervals.get(pos);
-      if (sf.getBegin() > interval.getBegin())
+      if (sf.getBegin() > from)
       {
         return false; // no match found
       }
@@ -481,8 +485,8 @@ public class IntervalStore<T extends IntervalI>
      * find the first interval whose end position is
      * after the target range start
      */
-    int startIndex = BinarySearcher.findFirst(nonNested,
-            val -> val.getEnd() >= from);
+    int startIndex = BinarySearcher.findFirst(nonNested, (int) from,
+            BinarySearcher.fend);
     for (int i = startIndex, n = nonNested.size(); i < n; i++)
     {
       T sf = nonNested.get(i);

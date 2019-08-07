@@ -68,7 +68,7 @@ import org.testng.annotations.Test;
 public class TimingTests2
 {
 
-  private static final boolean INTERVAL_ONLY = false;
+  private static final boolean INTERVAL_ONLY = true;
   private static final float MAX_MS = 1000;
 
   /*

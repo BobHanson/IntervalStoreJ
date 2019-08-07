@@ -32,7 +32,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package intervalstore.impl;
 
 import java.util.List;
-import java.util.function.Function;
+import java.util.function.ToIntFunction;
+
+import intervalstore.api.IntervalI;
 
 /**
  * Provides a method to perform binary search of an ordered list for the first
@@ -42,6 +44,29 @@ import java.util.function.Function;
  */
 public final class BinarySearcher
 {
+
+  public static ToIntFunction<IntervalI> fbegin = new ToIntFunction<IntervalI>()
+  {
+
+    @Override
+    public int applyAsInt(IntervalI value)
+    {
+      return value.getBegin();
+    }
+
+  };
+
+  public static ToIntFunction<IntervalI> fend = new ToIntFunction<IntervalI>()
+  {
+
+    @Override
+    public int applyAsInt(IntervalI value)
+    {
+      return value.getEnd();
+    }
+
+  };
+
   private BinarySearcher()
   {
   }
@@ -63,8 +88,8 @@ public final class BinarySearcher
    * @return
    * @see java.util.Collections#binarySearch(List, Object)
    */
-  public static <T> int findFirst(List<? extends T> list,
-          Function<T, Boolean> test)
+  public static <T> int findFirst(List<? extends T> list, int pos,
+          ToIntFunction<T> test)
   {
     int start = 0;
     int end = list.size() - 1;
@@ -74,7 +99,7 @@ public final class BinarySearcher
     {
       int mid = (start + end) / 2;
       T entry = list.get(mid);
-      boolean itsTrue = test.apply(entry);
+      boolean itsTrue = test.applyAsInt(entry) >= pos;
       if (itsTrue)
       {
         matched = mid;

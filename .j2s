@@ -1,0 +1,20 @@
+j2s.compiler.status=enable
+
+#a semicolon-separated list of package-level file paths to be excluded
+
+
+#a semicolon-separated list of package (foo.) or class (foo.bar) replacements to be made 
+
+
+#output file name for logging methods declared - delete the file to regenerate a listing 
+#j2s.log.methods.declared=swingjs/methodsDeclared.csv
+
+#output file name for logging methods called - delete the file to regenerate a listing
+#j2s.log.methods.called=swingjs/methodsCalled.csv
+
+#if set, every instance of methods called will be logged
+#otherwise, only the first call to a method will be logged 
+#output will be comma-separated: called method,caller class 
+#j2s.log.all.calls=true
+
+
