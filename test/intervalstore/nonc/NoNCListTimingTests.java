@@ -585,7 +585,7 @@ public class NoNCListTimingTests
                 QUERY_STORE_INTERVAL_SIZE);
         IntervalStore<Range> ncl = new IntervalStore<>(ranges);
         ncl.isValid();
-        if (j == LOG_0 && i == 0)
+        if (i == 0)
           System.out.println("Query interval " + QUERY_STORE_INTERVAL_SIZE
                   + " factor " + QUERY_STORE_SIZE_FACTOR + " dimensions ["
                   + ncl.getDepth() + " " + ncl.getWidth() + "]");
