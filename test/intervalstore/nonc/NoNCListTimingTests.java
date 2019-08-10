@@ -68,9 +68,22 @@ public class NoNCListTimingTests
   /**
    * flag for only doing IntervalStore tests
    */
-  private static final boolean INTERVAL_ONLY = false;
+  private static final boolean INTERVAL_ONLY = true;
 
-  private static final boolean QUERY_ONLY = false;
+  private static final boolean INCLUDE_NAIVE = false;
+
+  private static final boolean QUERY_ONLY = true;
+
+  private static final int QUERY_STORE_INTERVAL_SIZE = 50;
+
+  private static final int QUERY_STORE_SIZE_FACTOR = 10; // 0 for maxLength; 1
+  // for original
+
+  /**
+   * maximum number of milliseconds we are willing to wait; otherwise abort
+   * looping
+   */
+  private static final float MAX_MS = 1000;
 
   /**
    * initial value for loop [LOG_0, MAX_LOG] inclusive
@@ -86,13 +99,6 @@ public class NoNCListTimingTests
    * factor in Math.pow(10, j / LOG_F)
    */
   private static final double LOG_F = 3.0;
-
-
-  /**
-   * maximum number of milliseconds we are willing to wait; otherwise abort
-   * looping
-   */
-  private static final float MAX_MS = 1000;
 
   /*
    * use a fixed random seed for repeatable tests
@@ -207,7 +213,8 @@ public class NoNCListTimingTests
   private synchronized List<Range> generateIntervals(int count,
           int maxLength)
   {
-    int maxPos = 4 * count;
+    int maxPos = 4 * count * (QUERY_STORE_SIZE_FACTOR == 0 ? maxLength
+            : QUERY_STORE_SIZE_FACTOR);
     List<Range> ranges = new ArrayList<>();
     for (int j = 0; j < count; j++)
     {
@@ -225,7 +232,7 @@ public class NoNCListTimingTests
    */
   public synchronized void testLoadTime_naiveList_bulkLoad()
   {
-    if (INTERVAL_ONLY || QUERY_ONLY)
+    if (INTERVAL_ONLY || QUERY_ONLY || !INCLUDE_NAIVE)
       return;
     for (int j = LOG_0; j <= MAX_LOGN; j++)
     {
@@ -254,7 +261,7 @@ public class NoNCListTimingTests
    */
   public synchronized void testLoadTime_naiveList_noDuplicates()
   {
-    if (INTERVAL_ONLY || QUERY_ONLY)
+    if (INTERVAL_ONLY || QUERY_ONLY || !INCLUDE_NAIVE)
       return;
     for (int j = LOG_0; j <= MAX_LOGN; j++)
     {
@@ -345,7 +352,7 @@ public class NoNCListTimingTests
    */
   public synchronized void testQueryTime_naive()
   {
-    if (INTERVAL_ONLY)
+    if (INTERVAL_ONLY || !INCLUDE_NAIVE)
       return;
     for (int j = LOG_0; j <= MAX_LOGN; j++)
     {
@@ -353,7 +360,8 @@ public class NoNCListTimingTests
       double[] data = new double[REPEATS];
       for (int i = 0; i < REPEATS + WARMUPS; i++)
       {
-        List<Range> ranges = generateIntervals(count);
+        List<Range> ranges = generateIntervals(count,
+                QUERY_STORE_INTERVAL_SIZE);
 
         List<Range> queries = generateIntervals(count);
         long now = System.currentTimeMillis();
@@ -573,15 +581,20 @@ public class NoNCListTimingTests
       double[] data = new double[REPEATS];
       for (int i = 0; i < REPEATS + WARMUPS; i++)
       {
-        List<Range> ranges = generateIntervals(count, 1);
+        List<Range> ranges = generateIntervals(count,
+                QUERY_STORE_INTERVAL_SIZE);
         IntervalStore<Range> ncl = new IntervalStore<>(ranges);
         ncl.isValid();
+        if (j == LOG_0 && i == 0)
+          System.out.println("Query interval " + QUERY_STORE_INTERVAL_SIZE
+                  + " factor " + QUERY_STORE_SIZE_FACTOR + " dimensions ["
+                  + ncl.getDepth() + " " + ncl.getWidth() + "]");
         List<Range> queries = generateIntervals(count);
         long now = System.currentTimeMillis();
         for (int ir = 0; ir < count; ir++)
         {
           Range q= queries.get(ir); 
-          ncl.findOverlaps(q.getBegin(), q.getEnd());
+          ncl.findOverlaps(q.getBegin(), q.getEnd(), null);
         }
         long elapsed = System.currentTimeMillis() - now;
         if (i >= WARMUPS)

@@ -66,8 +66,7 @@ public class NCListRandomisedTest
    */
   private Random random = new Random(107);
 
-  private Comparator<IntervalI> sorter = new NCListBuilder<>()
-          .getComparator();
+  private Comparator<? super IntervalI> sorter = IntervalI.COMPARATOR_BIGENDIAN;
 
   /**
    * Provides the scales for pseudo-random NCLists i.e. the range of the maximal

@@ -45,6 +45,20 @@ public class Range implements IntervalI
 
   public int end;
 
+  public int index;
+
+  @Override
+  public int getIndex()
+  {
+    return index;
+  }
+
+  @Override
+  public void setIndex(int i)
+  {
+    index = i;
+  }
+
   private IntervalI containedBy;
 
   @Override

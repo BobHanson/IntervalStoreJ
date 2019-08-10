@@ -44,7 +44,7 @@ public class NoNCListBuilderTest
   @Test(groups = "Functional")
   public void testCompare()
   {
-    Comparator<IntervalI> comp = new IntervalComparator();
+    Comparator<? super IntervalI> comp = IntervalI.COMPARATOR_BIGENDIAN;
 
     // same position, same length
     assertEquals(comp.compare(new Range(10, 20), new Range(10, 20)), 0);

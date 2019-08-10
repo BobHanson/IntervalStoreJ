@@ -37,6 +37,33 @@ import java.util.List;
 
 public interface IntervalI
 {
+
+  /**
+   * Compare intervals by start position ascending and end position descending.
+   */
+  static Comparator<? super IntervalI> COMPARATOR_BIGENDIAN = new Comparator<IntervalI>()
+  {
+    @Override
+    public int compare(IntervalI o1, IntervalI o2)
+    {
+      int ret = Integer.signum(o1.getBegin() - o2.getBegin());
+      return (ret == 0 ? Integer.signum(o2.getEnd() - o1.getEnd()) : ret);
+    }
+  };
+
+  /**
+   * Compare intervals by start position ascending and end position ascending.
+   */
+  static Comparator<? super IntervalI> COMPARATOR_LITTLEENDIAN = new Comparator<IntervalI>()
+  {
+    @Override
+    public int compare(IntervalI o1, IntervalI o2)
+    {
+      int ret = Integer.signum(o1.getBegin() - o2.getBegin());
+      return (ret == 0 ? Integer.signum(o1.getEnd() - o2.getEnd()) : ret);
+    }
+  };
+
   /**
    * a comparator for sorting intervals by start position ascending
    */
@@ -45,7 +72,7 @@ public interface IntervalI
     @Override
     public int compare(IntervalI o1, IntervalI o2)
     {
-      return Integer.compare(o1.getBegin(), o2.getBegin());
+      return Integer.signum(o1.getBegin() - o2.getBegin());
     }
   };
 
@@ -57,7 +84,7 @@ public interface IntervalI
     @Override
     public int compare(IntervalI o1, IntervalI o2)
     {
-      return Integer.compare(o2.getEnd(), o1.getEnd());
+      return Integer.signum(o2.getEnd() - o1.getEnd());
     }
   };
 
@@ -73,8 +100,8 @@ public interface IntervalI
    */
   default boolean containsInterval(IntervalI i)
   {
-    return i != null
-            && i.getBegin() >= getBegin() && i.getEnd() <= getEnd();
+    return i != null && i.getBegin() >= getBegin()
+            && i.getEnd() <= getEnd();
   }
 
   /**
@@ -126,4 +153,5 @@ public interface IntervalI
     Collections.sort(intervals,
             forwardStrand ? FORWARD_STRAND : REVERSE_STRAND);
   }
+
 }

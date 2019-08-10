@@ -270,7 +270,7 @@ public class IntervalStore<T extends IntervalI>
     String pp = nonNested.toString();
     if (nested != null)
     {
-      pp += System.lineSeparator() + nested.prettyPrint();
+      pp += '\n' + nested.prettyPrint();
     }
     return pp;
   }
@@ -507,7 +507,8 @@ public class IntervalStore<T extends IntervalI>
     String s = nonNested.toString();
     if (nested != null)
     {
-      s = s + System.lineSeparator() + nested.toString();
+      s = s + '\n'// + System.lineSeparator()
+              + nested.toString();
     }
     return s;
   }

@@ -48,36 +48,37 @@ import intervalstore.api.IntervalI;
  */
 public class NCListBuilder<T extends IntervalI>
 {
-  class NCListComparator<V extends IntervalI> implements Comparator<V>
-  {
-    /**
-     * Compares two intervals in a way that will sort a list by start position
-     * ascending, then by length descending. Answers
-     * <ul>
-     * <li>a negative value if o1.begin < o2.begin</li>
-     * <li>else a positive value if o1.begin > o2.begin</li>
-     * <li>else a negative value if o1.end > o2.end</li>
-     * <li>else a positive value of o1.end < o2.end</li>
-     * <li>else zero</li
-     * </ul>
-     */
-    @Override
-    public int compare(V o1, V o2)
-    {
-      int order = Integer.compare(o1.getBegin(), o2.getBegin());
-      if (order == 0)
-      {
-        /*
-         * if tied on start position, longer length sorts to left
-         * i.e. the negation of normal ordering by length
-         */
-        order = Integer.compare(o2.getEnd(), o1.getEnd());
-      }
-      return order;
-    }
-  }
+  // class NCListComparator<V extends IntervalI> implements Comparator<V>
+  // {
+  // /**
+  // * Compares two intervals in a way that will sort a list by start position
+  // * ascending, then by length descending. Answers
+  // * <ul>
+  // * <li>a negative value if o1.begin < o2.begin</li>
+  // * <li>else a positive value if o1.begin > o2.begin</li>
+  // * <li>else a negative value if o1.end > o2.end</li>
+  // * <li>else a positive value of o1.end < o2.end</li>
+  // * <li>else zero</li
+  // * </ul>
+  // */
+  // @Override
+  // public int compare(V o1, V o2)
+  // {
+  // int order = Integer.compare(o1.getBegin(), o2.getBegin());
+  // if (order == 0)
+  // {
+  // /*
+  // * if tied on start position, longer length sorts to left
+  // * i.e. the negation of normal ordering by length
+  // */
+  // order = Integer.compare(o2.getEnd(), o1.getEnd());
+  // }
+  // return order;
+  // }
+  // }
 
-  private Comparator<T> comparator = new NCListComparator<>();
+  private Comparator<? super IntervalI> comparator = IntervalI.COMPARATOR_BIGENDIAN;// new
+                                                                                    // NCListComparator<>();
   
   /**
    * Default constructor
@@ -92,7 +93,7 @@ public class NCListBuilder<T extends IntervalI>
    * 
    * @return
    */
-  Comparator<T> getComparator()
+  Comparator<? super IntervalI> getComparator()
   {
     return comparator;
   }

@@ -168,7 +168,7 @@ class NCNode<T extends IntervalI> implements IntervalI
     sb.append(region.toString());
     if (subregions != null)
     {
-      sb.append(System.lineSeparator());
+      sb.append('\n');// System.lineSeparator());
       subregions.prettyPrint(sb, offset + 2, indent);
     }
   }

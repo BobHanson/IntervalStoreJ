@@ -68,8 +68,19 @@ import org.testng.annotations.Test;
 public class TimingTests2
 {
 
-  private static final boolean INTERVAL_ONLY = true;
+  private static final boolean INTERVAL_ONLY = false;
+
+  private static final boolean INCLUDE_NAIVE = false;
+
+  private static final boolean QUERY_ONLY = true;
+
   private static final float MAX_MS = 1000;
+
+  private static final int QUERY_STORE_INTERVAL_SIZE = 50;
+
+  private static final int QUERY_STORE_SIZE_FACTOR = 10;
+  // 0 for maxLength; 1
+                                                        // for original
 
   /*
    * use a fixed random seed for repeatable tests
@@ -166,7 +177,7 @@ public class TimingTests2
    */
   public void testLoadTime_nclist_bulkLoad()
   {
-    if (INTERVAL_ONLY)
+    if (INTERVAL_ONLY || QUERY_ONLY)
       return;
     for (int j = LOG_0; j <= MAX_LOGN; j++)
     {
@@ -212,7 +223,8 @@ public class TimingTests2
   private synchronized List<Range> generateIntervals(int count,
           int maxLength)
   {
-    int maxPos = 4 * count;
+    int maxPos = 4 * count * (QUERY_STORE_SIZE_FACTOR == 0 ? maxLength
+            : QUERY_STORE_SIZE_FACTOR);
     List<Range> ranges = new ArrayList<>();
     for (int j = 0; j < count; j++)
     {
@@ -228,7 +240,7 @@ public class TimingTests2
    */
   public void testLoadTime_nclist_incremental()
   {
-    if (INTERVAL_ONLY)
+    if (INTERVAL_ONLY || QUERY_ONLY)
       return;
     for (int j = LOG_0; j <= MAX_LOGN; j++)
     {
@@ -243,7 +255,7 @@ public class TimingTests2
    */
   public synchronized void testLoadTime_naiveList_bulkLoad()
   {
-    if (INTERVAL_ONLY)
+    if (INTERVAL_ONLY || QUERY_ONLY || !INCLUDE_NAIVE)
       return;
     for (int j = LOG_0; j <= MAX_LOGN; j++)
     {
@@ -272,7 +284,7 @@ public class TimingTests2
    */
   public synchronized void testLoadTime_naiveList_noDuplicates()
   {
-    if (INTERVAL_ONLY)
+    if (INTERVAL_ONLY || QUERY_ONLY || !INCLUDE_NAIVE)
       return;
     for (int j = LOG_0; j <= MAX_LOGN; j++)
     {
@@ -366,10 +378,16 @@ public class TimingTests2
       double[] data = new double[REPEATS];
       for (int i = 0; i < REPEATS + WARMUPS; i++)
       {
-        List<Range> ranges = generateIntervals(count, 1);
+        List<Range> ranges = generateIntervals(count,
+                QUERY_STORE_INTERVAL_SIZE);
         NCList<Range> ncl = new NCList<>(ranges);
-
         List<Range> queries = generateIntervals(count);
+
+        if (k == LOG_0 && i == 0)
+          System.out.println("Query interval " + QUERY_STORE_INTERVAL_SIZE
+                  + " factor " + QUERY_STORE_SIZE_FACTOR + " dimensions ["
+                  + ncl.getDepth() + " ?]");
+
         long now = System.currentTimeMillis();
         for (int ir = 0; ir < count; ir++)
         {
@@ -445,7 +463,7 @@ public class TimingTests2
    */
   public synchronized void testQueryTime_naive()
   {
-    if (INTERVAL_ONLY)
+    if (INTERVAL_ONLY || !INCLUDE_NAIVE)
       return;
     for (int j = LOG_0; j <= MAX_LOGN; j++)
     {
@@ -453,7 +471,8 @@ public class TimingTests2
       double[] data = new double[REPEATS];
       for (int i = 0; i < REPEATS + WARMUPS; i++)
       {
-        List<Range> ranges = generateIntervals(count);
+        List<Range> ranges = generateIntervals(count,
+                QUERY_STORE_INTERVAL_SIZE);
 
         List<Range> queries = generateIntervals(count);
         long now = System.currentTimeMillis();
@@ -538,6 +557,8 @@ public class TimingTests2
    */
   public synchronized void testLoadTime_intervalstore_bulkLoad()
   {
+    if (QUERY_ONLY)
+      return;
     for (int j = LOG_0; j <= MAX_LOGN; j++)
     {
       int count = (int) Math.pow(10, j / LOG_F);
@@ -564,6 +585,8 @@ public class TimingTests2
    */
   public synchronized void testLoadTime_intervalstore_incremental()
   {
+    if (QUERY_ONLY)
+      return;
     for (int j = LOG_0; j <= MAX_LOGN; j++)
     {
       int count = (int) Math.pow(10, j / LOG_F);
@@ -578,6 +601,8 @@ public class TimingTests2
    */
   public synchronized void testLoadTime_intervalstore_incrementalNoDuplicates()
   {
+    if (QUERY_ONLY)
+      return;
     for (int j = LOG_0; j <= MAX_LOGN; j++)
     {
       int count = (int) Math.pow(10, j / LOG_F);
@@ -597,10 +622,17 @@ public class TimingTests2
       double[] data = new double[REPEATS];
       for (int i = 0; i < REPEATS + WARMUPS; i++)
       {
-        List<Range> ranges = generateIntervals(count, 1);
+        List<Range> ranges = generateIntervals(count,
+                QUERY_STORE_INTERVAL_SIZE);
         IntervalStore<Range> ncl = new IntervalStore<>(ranges);
   
         List<Range> queries = generateIntervals(count);
+
+        if (j == LOG_0 && i == 0)
+          System.out.println("Query interval " + QUERY_STORE_INTERVAL_SIZE
+                  + " factor " + QUERY_STORE_SIZE_FACTOR + " dimensions ["
+                  + ncl.getDepth() + " ?]");
+
         long now = System.currentTimeMillis();
         for (int ir = 0; ir < count; ir++)
         {
@@ -624,6 +656,9 @@ public class TimingTests2
    */
   public synchronized void testRemoveTime_intervalstore()
   {
+
+    if (QUERY_ONLY)
+      return;
     /*
      * time to delete 1000 entries from stores of various sizes N
      */
@@ -665,7 +700,7 @@ public class TimingTests2
    */
   public void testRemoveTime_nclist()
   {
-    if (INTERVAL_ONLY)
+    if (INTERVAL_ONLY || QUERY_ONLY)
       return;
     /*
      * time deleting 1000 entries from stores of various sizes N
@@ -708,6 +743,8 @@ public class TimingTests2
    */
   public void testRemove_ArrayList()
   {
+    if (INTERVAL_ONLY || QUERY_ONLY)
+      return;
     final int deleteCount = 1000;
     for (int k = LOG_0; k <= MAX_LOGN; k++)
     {

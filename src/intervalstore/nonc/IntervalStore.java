@@ -62,34 +62,119 @@ public class IntervalStore<T extends IntervalI>
         extends AbstractCollection<T> implements IntervalStoreI<T>
 {
 
+  /**
+   * Search for the ANY overlapping interval. The innovation here is to take
+   * advantage of the fact that we are searching for intervals, not just
+   * numbers. We can match any overlapping interval of any sort, because all
+   * overlapping intervals are contiguous.
+   * 
+   * So once we find one, we have found all of them. We just might be in the
+   * middle of them. The containedBy linked list gets us the backward set, and
+   * our ordered array gets us the forward set.
+   * 
+   * Basically, we have established a binary partition tree that we can navigate
+   * easily.
+   * 
+   * 
+   * 
+   * @param a
+   * @param from
+   * @param to
+   * @return the matching index, or -1 if there is no match
+   */
+  public static int binaryAnyIntervalSearch(IntervalI[] a, long from,
+          long to)
+  {
+    int start = 0;
+    int end = a.length - 1;
+    while (start <= end)
+    {
+      int mid = (start + end) >>> 1;
+      if (a[mid].getEnd() >= from)
+      {
+        if (a[mid].getBegin() <= to)
+          return mid;
+        end = mid - 1;
+      }
+      else
+      {
+        start = mid + 1;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Search for the LAST overlapping interval. This is useful when we do not
+   * have an NCList
+   * 
+   * 
+   * @param a
+   * @param from
+   * @param to
+   * @return the matching index, or -1 if there is no match
+   */
+  public static int binaryLastIntervalSearch(IntervalI[] a, long from,
+          long to)
+  {
+    int start = 0;
+    int matched = -1;
+    int end = a.length - 1;
+    while (start <= end)
+    {
+      int mid = (start + end) >>> 1;
+      if (a[mid].getBegin() > to)
+      {
+        end = mid - 1;
+      }
+      else
+      {
+        if (a[mid].getEnd() >= from)
+          matched = mid;
+        start = mid + 1;
+      }
+
+    }
+    return matched;
+  }
+
+  /**
+   * My preference is for a bigendian comparison, but you may differ.
+   */
+  private Comparator<? super IntervalI> icompare;
+
+  /**
+   * bigendian is what NCList does; change icompare to switch to that
+   */
+  private boolean bigendian;
+
   private final boolean DO_PRESORT;
 
   private boolean isSorted;
 
   private List<T> intervals;
 
-  private boolean isTainted;
-
-  private IntervalI[] orderedIntervalStarts;
-
-  private static Comparator<IntervalI> icompare = new IntervalComparator();
+  private int minStart = Integer.MAX_VALUE, maxStart = Integer.MIN_VALUE,
+          maxEnd = Integer.MAX_VALUE;
 
   // private Comparator<IntervalI> icompare = new IntervalComparator();
+
+  private boolean isTainted;
+  
+  private IntervalI[] orderedIntervalStarts;
 
   /**
    * Constructor
    */
   public IntervalStore()
   {
-    intervals = new ArrayList<>();
-    DO_PRESORT = true;
-  };
-  
+    this(true);
+  }
+
   public IntervalStore(boolean presort)
   {
-    intervals = new ArrayList<>();
-    DO_PRESORT = presort;
-  };
+    this(null, presort);
+  }
 
   /**
    * Constructor given a list of intervals. Note that the list may get sorted as
@@ -109,9 +194,33 @@ public class IntervalStore<T extends IntervalI>
    */
   public IntervalStore(List<T> intervals, boolean presort)
   {
-    this.intervals = intervals;
+    this(intervals, presort, null, true);
+  }
+
+  /**
+   * 
+   * @param intervals
+   *          intervals to initialize with (others may still be added)
+   * @param presort
+   *          whether or not to presort the list as additions are made
+   * @param comparator
+   *          IntervalI.COMPARATOR_LITTLEENDIAN or
+   *          IntervalI.COMPARATOR_BIGENDIAN, but this could also be one that
+   *          sorts by description as well, for example.
+   * @param bigendian
+   *          true if the comparator sorts [10-30] before [10-20]
+   */
+  public IntervalStore(List<T> intervals, boolean presort,
+          Comparator<? super IntervalI> comparator, boolean bigendian)
+  {
+    this.intervals = (intervals == null ? new ArrayList<>() : intervals);
     DO_PRESORT = presort;
-    if (DO_PRESORT)
+    icompare = (comparator != null ? comparator
+            : bigendian ? IntervalI.COMPARATOR_BIGENDIAN
+                    : IntervalI.COMPARATOR_LITTLEENDIAN);
+    this.bigendian = bigendian;
+
+    if (DO_PRESORT && this.intervals.size() > 1)
     {
       sort();
     }
@@ -131,12 +240,17 @@ public class IntervalStore<T extends IntervalI>
       return false;
     }
 
+    int start = interval.getBegin();
+    int end = interval.getEnd();
+    minStart = Math.min(minStart, start);
+    maxStart = Math.max(maxStart, start);
+
     synchronized (intervals)
     {
       if (DO_PRESORT)
       {
-        int insertPosition = findFirstBegin(intervals, interval.getBegin());
-        intervals.add(insertPosition, interval);
+        intervals.add(binaryInsertionSearch(intervals, start, end),
+                interval);
         isSorted = true;
       }
       else
@@ -149,14 +263,120 @@ public class IntervalStore<T extends IntervalI>
     }
   }
 
+  /**
+   * for remove() and contains()
+   * 
+   * @param list
+   * @param interval
+   * @return
+   */
+  private int binaryIdentitySearch(List<T> list, T interval)
+  {
+    int start = 0;
+    int r0 = interval.getBegin();
+    int r1 = interval.getEnd();
+    int end = list.size() - 1;
+    if (end < 0 || r0 > maxStart || r1 > maxEnd || r0 < minStart)
+      return -1;
+    while (start <= end)
+    {
+      int mid = (start + end) >>> 1;
+      IntervalI r = list.get(mid);
+      switch (Integer.signum(r.getBegin() - r0))
+      {
+      case -1:
+        start = mid + 1;
+        continue;
+      case 1:
+        end = mid - 1;
+        continue;
+      case 0:
+        // found one; just scan up and down now
+        for (int i = mid; i <= end; i++)
+          if ((r = list.get(i)).getEnd() == r1 && r.getBegin() == r0
+                  && r.equals(interval))
+            return i;
+        for (int i = mid; --i >= start;)
+          if ((r = list.get(i)).getEnd() == r1 && r.getBegin() == r0
+                  && r.equals(interval))
+            return i;
+        return -1;
+      }
+    }
+    return -1;
+  }
+
+  private int binaryInsertionSearch(List<T> list, long from, long to)
+  {
+    int matched = list.size();
+    int end = matched - 1;
+    int start = matched;
+    if (end < 0 || from > list.get(end).getEnd()
+            || from < list.get(start = 0).getBegin())
+      return start;
+    while (start <= end)
+    {
+      int mid = (start + end) >>> 1;
+      switch (compareRange(list.get(mid), from, to))
+      {
+      case 0:
+        return mid;
+      case 1:
+        matched = mid;
+        end = mid - 1;
+        continue;
+      case -1:
+        start = mid + 1;
+        continue;
+      }
+
+    }
+    return matched;
+  }
+
   @Override
   public void clear()
   {
     intervals.clear();
     orderedIntervalStarts = null;
     isTainted = true;
+    minStart = maxEnd = Integer.MAX_VALUE;
+    maxStart = Integer.MIN_VALUE;
   }
 
+  /**
+   * Compare an interval t to a from/to range.
+   * 
+   * @param t
+   * @param from
+   * @param to
+   * @return -1 if t comes before range, 1 if after, 0 if overlapping
+   */
+  private int compareOverlap(T t, long from, long to)
+  {
+    int order = Long.signum(t.getBegin() - from);
+    return (order == 0
+            ? Long.signum(bigendian ? to - t.getEnd() : t.getEnd() - to)
+            : order);
+  }
+
+  /**
+   * Compare an interval t to a from/to range for insertion purposes
+   * 
+   * @param t
+   * @param from
+   * @param to
+   * @return 0 if same, 1 if start is after from, or start equals from and
+   *         [bigendian: end is before to | littleendian: end is after to], else
+   *         -1
+   */
+  private int compareRange(T t, long from, long to)
+  {
+    int order = Long.signum(t.getBegin() - from);
+    return (order == 0
+            ? Long.signum(bigendian ? to - t.getEnd() : t.getEnd() - to)
+            : order);
+  }
   @Override
   public boolean contains(Object entry)
   {
@@ -165,7 +385,8 @@ public class IntervalStore<T extends IntervalI>
 
   private void ensureFinalized()
   {
-    if (isTainted && intervals.size() >= 2)
+
+    if (isTainted && intervals.size() > 1)
     {
       if (!isSorted)
       {
@@ -177,101 +398,32 @@ public class IntervalStore<T extends IntervalI>
     }
   }
 
-  /**
-   * Sort intervals by start (lowest first) and end (highest first).
-   */
-  private void sort()
-  {
-    Collections.sort(intervals, icompare);
-    isSorted = true;
-  }
-
-  protected int findFirstBegin(List<T> list, long pos)
-  {
-    int start = 0;
-    int end = list.size() - 1;
-    int matched = list.size();
-
-    while (start <= end)
-    {
-      int mid = (start + end) / 2;
-      if (list.get(mid).getBegin() >= pos)
-      {
-        matched = mid;
-        end = mid - 1;
-      }
-      else
-      {
-        start = mid + 1;
-      }
-    }
-    return matched;
-  }
-
-  protected int findFirstEnd(List<T> list, long pos)
-  {
-    int start = 0;
-    int end = list.size() - 1;
-    int matched = list.size();
-
-    while (start <= end)
-    {
-      int mid = (start + end) / 2;
-      if (list.get(mid).getEnd() >= pos)
-      {
-        matched = mid;
-        end = mid - 1;
-      }
-      else
-      {
-        start = mid + 1;
-      }
-    }
-    return matched;
-  }
 
   /**
-   * Adds non-nested intervals to the result list that lie within the target
-   * range
+   * Find all overlaps within the given range, inclusively.
    * 
-   * @param from
-   * @param to
-   * @param result
+   * @return a list sorted in ascending order of start position
+   * 
    */
-  protected void findIntervalOverlaps(long from, long to,
-          List<T> result)
-  {
-
-    int startIndex = findFirstEnd(intervals, from);
-    final int startIndex1 = startIndex;
-    int i = startIndex1;
-    while (i < intervals.size())
-    {
-      T sf = intervals.get(i);
-      if (sf.getBegin() > to)
-      {
-        break;
-      }
-      if (sf.getBegin() <= to && sf.getEnd() >= from)
-      {
-        result.add(sf);
-      }
-      i++;
-    }
-  }
-
-
   @Override
-  public List<T> findOverlaps(long start, long end)
+  public List<T> findOverlaps(long from, long to)
   {
-    return findOverlaps(start, end, null);
+    List<T> list = findOverlaps(from, to, null);
+    // Collections.reverse(list);
+    return list;
   }
+
+  /**
+   * Find all overlaps within the given range, inclusively.
+   * 
+   * @return a list sorted in descending order of start position
+   * 
+   */
 
   @SuppressWarnings("unchecked")
   @Override
-  public List<T> findOverlaps(long start, long end, List<T> result)
+  public List<T> findOverlaps(long from, long to, List<T> result)
   {
-
     if (result == null)
     {
       result = new ArrayList<>();
@@ -283,7 +435,7 @@ public class IntervalStore<T extends IntervalI>
       return result;
     case 1:
       T sf = intervals.get(0);
-      if (sf.getBegin() <= end && sf.getEnd() >= start)
+      if (sf.getBegin() <= to && sf.getEnd() >= from)
       {
         result.add(sf);
       }
@@ -292,69 +444,57 @@ public class IntervalStore<T extends IntervalI>
 
     ensureFinalized();
 
-    // (1) Find the closest feature to this position.
-
-    int index = getClosestFeature(orderedIntervalStarts, start);
-    IntervalI sf = (index < 0 ? null : orderedIntervalStarts[index]);
-
-    // (2) Traverse the containedBy field, checking for overlap.
-
+    if (from > maxEnd || to < minStart)
+      return result;
+    int pt = binaryLastIntervalSearch(orderedIntervalStarts, from, to);
+    if (pt < 0)
+      return result;
+    IntervalI sf = orderedIntervalStarts[pt++];
     while (sf != null)
     {
-      if (sf.getEnd() >= start)
+      int index = sf.getIndex();
+      if (sf.getBegin() >= from)
       {
+        // fully contained -- take all
+        while (--pt > index)
+        {
+          result.add((T) orderedIntervalStarts[pt]);
+        }
+        result.add((T) sf);
+      }
+      else if (sf.getEnd() >= from)
+      {
+        // partially contained
+
+        // fill in the gaps only if the first partially contained interval
+
+        while (--pt > index)
+        {
+          T t = (T) orderedIntervalStarts[pt];
+          if (t.getEnd() >= from)
+          {
+            result.add(t);
+          }
+        }
+        pt = 0; // no more gap filling
         result.add((T) sf);
       }
       sf = sf.getContainedBy();
     }
-
-    // (3) For an interval, find the last feature that starts in this interval,
-    // and add all features up through that feature.
-
-    if (end >= start)
-    {
-      // fill in with all features that start within this interval, fully
-      // inclusive
-      int index2 = getClosestFeature(orderedIntervalStarts, end);
-      while (++index <= index2)
-      {
-        result.add((T) orderedIntervalStarts[index]);
-      }
-
-    }
     return result;
   }
 
-  private int getClosestFeature(IntervalI[] l, long pos)
-  {
-    int low = 0;
-    int high = l.length - 1;
-    while (low <= high)
-    {
-      int mid = (low + high) >>> 1;
-      IntervalI f = l[mid];
-      switch (Long.signum(f.getBegin() - pos))
-      {
-      case -1:
-        low = mid + 1;
-        continue;
-      case 1:
-        high = mid - 1;
-        continue;
-      case 0:
 
-        while (++mid <= high && l[mid].getBegin() == pos)
-        {
-          ;
-        }
-        return --mid;
-      }
-    }
-    return (high < 0 ? -1 : high);
+  @Override
+  public IntervalI get(int i)
+  {
+    ensureFinalized();
+    return (i < 0 || i >= orderedIntervalStarts.length ? null
+            : orderedIntervalStarts[i]);
   }
 
   @SuppressWarnings("unchecked")
-  public T getContainedBy(T sf, T sf0)
+  private T getContainedBy(T sf, T sf0)
   {
     int begin = sf0.getBegin();
     while (sf != null)
@@ -403,6 +543,21 @@ public class IntervalStore<T extends IntervalI>
   }
 
   @Override
+  public int getWidth()
+  {
+    ensureFinalized();
+    int w = 0;
+    for (int i = intervals.size(); --i >= 0;)
+    {
+      if (intervals.get(i).getContainedBy() == null)
+      {
+        w++;
+      }
+    }
+    return w;
+  }
+
+  @Override
   public boolean isValid()
   {
     ensureFinalized();
@@ -419,7 +574,6 @@ public class IntervalStore<T extends IntervalI>
   public Iterator<T> iterator()
   {
     return intervals.iterator();
-
   }
 
   @SuppressWarnings("unchecked")
@@ -430,9 +584,11 @@ public class IntervalStore<T extends IntervalI>
     {
       return;
     }
-    int maxEnd = features[0].getEnd();
+    maxEnd = features[0].getEnd();
+    features[0].setIndex(0);
     for (int i = 1; i < n; i++)
     {
+      features[i].setIndex(i);
       T sf = (T) features[i];
       if (sf.getBegin() <= maxEnd)
       {
@@ -455,119 +611,12 @@ public class IntervalStore<T extends IntervalI>
    * @param entry
    * @return
    */
+  @SuppressWarnings("unchecked")
   protected boolean listContains(List<T> intervals, Object entry)
   {
-    if (intervals == null || entry == null)
-    {
-      return false;
-    }
-
-    if (!isSorted)
-    {
-      return intervals.contains(entry);
-    }
-
-    @SuppressWarnings("unchecked")
-    T interval = (T) entry;
-
-    /*
-     * locate the first entry in the list which does not precede the interval
-     */
-    int pos = findFirstBegin(intervals, interval.getBegin());
-    int len = intervals.size();
-    while (pos < len)
-    {
-      T sf = intervals.get(pos);
-      if (sf.getBegin() > interval.getBegin())
-      {
-        return false; // no match found
-      }
-      if (sf.getEnd() == interval.getEnd() && sf.equals(interval))
-      {
-        return true;
-      }
-      pos++;
-    }
-    return false;
-  }
-
-  @Override
-  public synchronized boolean remove(Object o)
-  {
-    // if (o == null)
-    // {
-    // throw new NullPointerException();
-    // }
-    return (o != null && intervals.size() > 0
-            && removeInterval((IntervalI) o));
-  }
-
-  /**
-   * Uses a binary search to find the entry and removes it if found.
-   * 
-   * @param entry
-   * @return
-   */
-  protected boolean removeInterval(IntervalI entry)
-  {
-    if (!isSorted)
-    {
-      return intervals.remove(entry);
-    }
-
-    /*
-     * find the first interval that might match, i.e. whose 
-     * start position is not less than the target range start
-     * (NB inequality test ensures the first match if any is found)
-     */
-    int startIndex = findFirstBegin(intervals, entry.getBegin());
-
-    /*
-     * traverse intervals to look for a match
-     */
-    int from = entry.getBegin();
-    int to = entry.getEnd();
-    for (int i = startIndex, size = intervals.size(); i < size; i++)
-    {
-      T sf = intervals.get(i);
-      if (sf.getBegin() > from)
-      {
-        return false;
-      }
-      if (sf.getEnd() == to && sf.equals(entry))
-      {
-        intervals.remove(i).setContainedBy(null);
-        return (isTainted = true);
-      }
-    }
-    return false;
-  }
-
-  @Override
-  public int size()
-  {
-    return intervals.size();
-  }
-
-  @Override
-  public String toString()
-  {
-    return prettyPrint();
-  }
-
-  @Override
-  public int getWidth()
-  {
-    ensureFinalized();
-    int w = 0;
-    for (int i = intervals.size(); --i >= 0;)
-    {
-      if (intervals.get(i).getContainedBy() == null)
-      {
-        w++;
-      }
-    }
-    return w;
+    return (intervals != null && entry != null
+            && (isSorted ? binaryIdentitySearch(intervals, (T) entry) >= 0
+                    : intervals.contains(entry)));
   }
 
   @Override
@@ -599,6 +648,37 @@ public class IntervalStore<T extends IntervalI>
     return sb.toString();
   }
 
+  @SuppressWarnings("unchecked")
+  @Override
+  public synchronized boolean remove(Object o)
+  {
+    // if (o == null)
+    // {
+    // throw new NullPointerException();
+    // }
+    return (o != null && intervals.size() > 0
+            && removeInterval((T) o));
+  }
+
+  /**
+   * Uses a binary search to find the entry and removes it if found.
+   * 
+   * @param entry
+   * @return
+   */
+  protected boolean removeInterval(T entry)
+  {
+    if (!isSorted)
+    {
+      return intervals.remove(entry);
+    }
+    int i = binaryIdentitySearch(intervals, entry);
+    if (i < 0)
+      return false;
+    intervals.remove(i).setContainedBy(null);
+    return (isTainted = true);
+  }
+
   @Override
   public boolean revalidate()
   {
@@ -609,11 +689,30 @@ public class IntervalStore<T extends IntervalI>
   }
 
   @Override
-  public IntervalI get(int i)
+  public int size()
   {
-    ensureFinalized();
-    return (i < 0 || i >= orderedIntervalStarts.length ? null
-            : orderedIntervalStarts[i]);
+    return intervals.size();
+  }
+
+  /**
+   * Sort intervals by start (lowest first) and end (highest first).
+   */
+  private void sort()
+  {
+    Collections.sort(intervals, icompare);
+    if (intervals.size() > 0)
+    {
+      T r = intervals.get(intervals.size() - 1);
+      minStart = Math.min(minStart, intervals.get(0).getBegin());
+      maxStart = Math.max(maxStart, r.getBegin());
+    }
+    isSorted = true;
+  }
+
+  @Override
+  public String toString()
+  {
+    return prettyPrint();
   }
 
 }
