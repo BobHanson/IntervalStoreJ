@@ -362,4 +362,19 @@ class NCNode<T extends IntervalI> implements IntervalI
     }
     return false;
   }
+
+  @Override
+  public int getContainedBy()
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+  @Override
+  public void setContainedBy(int containedBy)
+  {
+    // TODO Auto-generated method stub
+
+  }
+
 }

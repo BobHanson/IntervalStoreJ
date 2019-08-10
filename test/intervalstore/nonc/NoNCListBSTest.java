@@ -40,6 +40,8 @@ import java.util.Random;
 
 import org.testng.annotations.Test;
 
+import intervalstore.impl.Range;
+
 public class NoNCListBSTest
 {
   @Test(enabled = true) // groups = "functional")

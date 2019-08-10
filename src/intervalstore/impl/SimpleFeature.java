@@ -31,18 +31,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package intervalstore.impl;
 
-import intervalstore.api.IntervalI;
-
 /**
  * A simplified feature instance sufficient for unit test purposes
  */
-public class SimpleFeature implements IntervalI
+public class SimpleFeature extends Range
 {
-  final private int begin;
-
-  final private int end;
 
   private String description;
+
 
   /**
    * Constructor
@@ -53,8 +49,7 @@ public class SimpleFeature implements IntervalI
    */
   public SimpleFeature(int from, int to, String desc)
   {
-    begin = from;
-    end = to;
+    super(from, to);
     description = desc;
   }
 
@@ -65,19 +60,7 @@ public class SimpleFeature implements IntervalI
    */
   public SimpleFeature(SimpleFeature sf1)
   {
-    this(sf1.begin, sf1.end, sf1.description);
-  }
-
-  @Override
-  public int getBegin()
-  {
-    return begin;
-  }
-
-  @Override
-  public int getEnd()
-  {
-    return end;
+    this(sf1.start, sf1.end, sf1.description);
   }
 
   public String getDescription()
@@ -88,7 +71,7 @@ public class SimpleFeature implements IntervalI
   @Override
   public int hashCode()
   {
-    return begin + 37 * end
+    return start + 37 * end
             + (description == null ? 0 : description.hashCode());
   }
 
@@ -102,7 +85,7 @@ public class SimpleFeature implements IntervalI
     if (obj != null && obj instanceof SimpleFeature)
     {
       SimpleFeature o = (SimpleFeature) obj;
-      if (this.begin == o.begin && this.end == o.end)
+      if (this.start == o.start && this.end == o.end)
       {
         if (this.description == null)
         {
@@ -117,7 +100,8 @@ public class SimpleFeature implements IntervalI
   @Override
   public String toString()
   {
-    return begin + ":" + end + ":" + description;
+    return start + ":" + end + ":" + description;
   }
+
 
 }

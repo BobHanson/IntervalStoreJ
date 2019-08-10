@@ -41,6 +41,8 @@ import java.util.NoSuchElementException;
 
 import org.testng.annotations.Test;
 
+import intervalstore.impl.Range;
+
 public class NoNCListIntervalIteratorTest
 {
   @Test(groups = "Functional")

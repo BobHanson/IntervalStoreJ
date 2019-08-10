@@ -512,4 +512,32 @@ public class IntervalStore<T extends IntervalI>
     }
     return s;
   }
+
+  @Override
+  public int getWidth()
+  {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+  @Override
+  public List<T> findOverlaps(long start, long end, List<T> result)
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public boolean revalidate()
+  {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  @Override
+  public IntervalI get(int i)
+  {
+    // TODO Auto-generated method stub
+    return null;
+  }
 }

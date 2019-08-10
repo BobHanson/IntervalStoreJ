@@ -38,6 +38,8 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
+import intervalstore.api.IntervalI;
+import intervalstore.api.IntervalStoreI;
 
 
 /**
@@ -123,15 +125,15 @@ public class IntervalStore<T extends IntervalI>
     while (start <= end)
     {
       int mid = (start + end) >>> 1;
-      if (a[mid].getBegin() > to)
+      IntervalI e = a[mid];
+      if (e.getBegin() > to)
       {
         end = mid - 1;
       }
       else
       {
-        if (a[mid].getEnd() >= from)
           matched = mid;
-        start = mid + 1;
+          start = mid + 1;
       }
 
     }
@@ -409,7 +411,7 @@ public class IntervalStore<T extends IntervalI>
   public List<T> findOverlaps(long from, long to)
   {
     List<T> list = findOverlaps(from, to, null);
-    // Collections.reverse(list);
+    Collections.reverse(list);
     return list;
   }
 
@@ -446,13 +448,13 @@ public class IntervalStore<T extends IntervalI>
 
     if (from > maxEnd || to < minStart)
       return result;
-    int pt = binaryLastIntervalSearch(orderedIntervalStarts, from, to);
-    if (pt < 0)
+    int index = binaryLastIntervalSearch(orderedIntervalStarts, from, to);
+    if (index < 0)
       return result;
-    IntervalI sf = orderedIntervalStarts[pt++];
-    while (sf != null)
+    int pt = index + 1;
+    while (index != IntervalI.NOT_CONTAINED)
     {
-      int index = sf.getIndex();
+      IntervalI sf = orderedIntervalStarts[index];
       if (sf.getBegin() >= from)
       {
         // fully contained -- take all
@@ -479,11 +481,11 @@ public class IntervalStore<T extends IntervalI>
         pt = 0; // no more gap filling
         result.add((T) sf);
       }
-      sf = sf.getContainedBy();
+      int pt1 = orderedIntervalStarts[index].getContainedBy();
+      index = (pt1 == IntervalI.NOT_CONTAINED ? pt1 : index - pt1);
     }
     return result;
   }
-
 
   @Override
   public IntervalI get(int i)
@@ -494,20 +496,21 @@ public class IntervalStore<T extends IntervalI>
   }
 
   @SuppressWarnings("unchecked")
-  private T getContainedBy(T sf, T sf0)
+  private int getContainedBy(int index, int begin)
   {
-    int begin = sf0.getBegin();
-    while (sf != null)
+    int pt = 0;
+    while (pt != IntervalI.NOT_CONTAINED)
     {
+      IntervalI sf = orderedIntervalStarts[index];
       if (begin <= sf.getEnd())
       {
         // System.out.println("\nIS found " + sf0.getIndex1() + ":" + sf0
         // + "\nFS in " + sf.getIndex1() + ":" + sf);
-        return sf;
+        return index;
       }
-      sf = (T) sf.getContainedBy();
+      index -= (pt = sf.getContainedBy());
     }
-    return null;
+    return IntervalI.NOT_CONTAINED;
   }
 
   @Override
@@ -525,14 +528,17 @@ public class IntervalStore<T extends IntervalI>
     {
       T element = intervals.get(i);
       IntervalI container = element;
-      if (element.getContainedBy() == null)
+      if (element.getContainedBy() == IntervalI.NOT_CONTAINED)
       {
         root = element;
       }
       int depth = 1;
-      while ((container = container.getContainedBy()) != null)
+      int index = i;
+      int pt;
+      while ((pt = element.getContainedBy()) != IntervalI.NOT_CONTAINED)
       {
-        if (++depth > maxDepth && container == root)
+        element = (T) orderedIntervalStarts[index = index - pt];
+        if (++depth > maxDepth && element == root)
         {
           maxDepth = depth;
           break;
@@ -549,7 +555,7 @@ public class IntervalStore<T extends IntervalI>
     int w = 0;
     for (int i = intervals.size(); --i >= 0;)
     {
-      if (intervals.get(i).getContainedBy() == null)
+      if (intervals.get(i).getContainedBy() == IntervalI.NOT_CONTAINED)
       {
         w++;
       }
@@ -580,20 +586,23 @@ public class IntervalStore<T extends IntervalI>
   private void linkFeatures(IntervalI[] features)
   {
     int n = features.length;
-    if (n < 2)
+    if (n == 0)
+      return;
+    maxEnd = features[0].getEnd();
+    features[0].setContainedBy(IntervalI.NOT_CONTAINED);
+    if (n == 1)
     {
       return;
     }
-    maxEnd = features[0].getEnd();
-    features[0].setIndex(0);
     for (int i = 1; i < n; i++)
     {
-      features[i].setIndex(i);
       T sf = (T) features[i];
-      if (sf.getBegin() <= maxEnd)
-      {
-        sf.setContainedBy(getContainedBy((T) features[i - 1], sf));
-      }
+      int begin = sf.getBegin();
+      int index = (begin <= maxEnd ? getContainedBy(i - 1, begin) : -1);
+        // System.out.println(sf + " is contained by "
+        // + (index < 0 ? null : orderedIntervalStarts[index]));
+
+      sf.setContainedBy(index < 0 ? IntervalI.NOT_CONTAINED : i - index);
       if (sf.getEnd() > maxEnd)
       {
         maxEnd = sf.getEnd();
@@ -637,11 +646,14 @@ public class IntervalStore<T extends IntervalI>
     for (int i = 0; i < n; i++)
     {
       IntervalI range = orderedIntervalStarts[i];
-      IntervalI container = range.getContainedBy();
-      while (container != null)
+      int index = i;
+      int pt = range.getContainedBy();
+      while (pt != IntervalI.CONTAINMENT_UNKNOWN
+              && pt != IntervalI.NOT_CONTAINED)
       {
         sb.append(sep);
-        container = container.getContainedBy();
+        index -= pt;
+        pt = orderedIntervalStarts[index].getContainedBy();
       }
       sb.append(range.toString()).append('\n');
     }
@@ -675,7 +687,7 @@ public class IntervalStore<T extends IntervalI>
     int i = binaryIdentitySearch(intervals, entry);
     if (i < 0)
       return false;
-    intervals.remove(i).setContainedBy(null);
+    intervals.remove(i).setContainedBy(IntervalI.CONTAINMENT_UNKNOWN);
     return (isTainted = true);
   }
 
@@ -713,6 +725,26 @@ public class IntervalStore<T extends IntervalI>
   public String toString()
   {
     return prettyPrint();
+  }
+
+  @SuppressWarnings("unchecked")
+  public boolean containsInterval(IntervalI outer, IntervalI inner)
+  {
+    ensureFinalized();
+    int index = binaryIdentitySearch(intervals, (T) inner);
+    if (index < 0)
+      return false;
+    int offset;
+    while ((offset = inner
+            .getContainedBy()) != IntervalI.CONTAINMENT_UNKNOWN
+            && offset != IntervalI.NOT_CONTAINED)
+    {
+      index -= offset;
+      inner = orderedIntervalStarts[index];
+      if (inner == outer)
+        return true;
+    }
+    return false;
   }
 
 }

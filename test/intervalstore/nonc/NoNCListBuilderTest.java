@@ -38,6 +38,9 @@ import java.util.Comparator;
 
 import org.testng.annotations.Test;
 
+import intervalstore.api.IntervalI;
+import intervalstore.impl.Range;
+
 public class NoNCListBuilderTest
 {
 

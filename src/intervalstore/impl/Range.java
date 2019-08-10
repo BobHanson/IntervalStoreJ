@@ -38,9 +38,15 @@ import intervalstore.api.IntervalI;
  */
 public class Range implements IntervalI
 {
-  public final int start;
 
-  public final int end;
+  // no need for final here; these can be fully mutable as long as
+  // store.revalidate() is run afterwords
+
+  public int start;
+
+  public int end;
+
+  private int containedBy;
 
   @Override
   public int getBegin()
@@ -82,4 +88,30 @@ public class Range implements IntervalI
     }
     return false;
   }
+
+  @Override
+  public int getContainedBy()
+  {
+    // TODO Auto-generated method stub
+    return containedBy;
+  }
+
+  @Override
+  public void setContainedBy(int containedBy)
+  {
+    this.containedBy = containedBy;
+
+  }
+
+  public void setStart(int pos)
+  {
+    start = pos;
+  }
+
+  public void setEnd(int pos)
+  {
+    end = pos;
+  }
+
+
 }
