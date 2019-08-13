@@ -31,51 +31,64 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package intervalstore.nonc;
 
-import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertSame;
+import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
-import java.util.Comparator;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import org.testng.annotations.Test;
 
-public class NoNCListBuilderTest
+import intervalstore.impl.Range;
+
+public class ISLinkIntervalIteratorTest2
 {
-
   @Test(groups = "Functional")
-  public void testCompare()
+  public void testNext()
   {
-    Comparator<? super IntervalI> comp = IntervalI.COMPARATOR_BIGENDIAN;
+    IntervalStore2<Range> store = new IntervalStore2<>();
 
-    // same position, same length
-    assertEquals(comp.compare(new Range(10, 20), new Range(10, 20)), 0);
-
-    // same position, len1 > len2
-    assertEquals(comp.compare(new Range(10, 20), new Range(10, 19)), -1);
-
-    // same position, len1 < len2
-    assertEquals(comp.compare(new Range(10, 20), new Range(10, 21)), 1);
-
-    // pos1 > pos2
-    assertEquals(comp.compare(new Range(11, 20), new Range(10, 20)), 1);
-
-    // pos1 < pos2
-    assertEquals(comp.compare(new Range(10, 20), new Range(11, 11)), -1);
-    
-    try {
-      comp.compare(new Range(10, 20), null);
-      fail("Expected exception");
-    } catch (NullPointerException e)
-    {
-      // expected
-    }
-
+    Iterator<Range> it = store.iterator();
+    assertFalse(it.hasNext());
     try
     {
-      comp.compare(null, new Range(10, 20));
-      fail("Expected exception");
-    } catch (NullPointerException e)
+      it.next();
+      fail("expected exception");
+    } catch (NoSuchElementException e)
     {
       // expected
     }
+
+    Range range1 = new Range(11, 20);
+    store.add(range1);
+    it = store.iterator();
+    assertTrue(it.hasNext());
+    assertSame(range1, it.next());
+    assertFalse(it.hasNext());
+
+    Range range2 = new Range(4, 8);
+    store.add(range2);
+    Range range3 = new Range(40, 60);
+    store.add(range3);
+    it = store.iterator();
+    assertSame(range2, it.next());
+    assertSame(range1, it.next());
+    assertSame(range3, it.next());
+    assertFalse(it.hasNext());
+
+    /*
+     * add nested intervals
+     */
+    store.clear();
+    store.add(range1);
+    Range range4 = new Range(15, 18);
+    store.add(range4);
+    it = store.iterator();
+    assertTrue(it.hasNext());
+    assertSame(range1, it.next());
+    assertSame(range4, it.next());
+    assertFalse(it.hasNext());
   }
 }

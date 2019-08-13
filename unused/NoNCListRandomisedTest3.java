@@ -44,6 +44,8 @@ import java.util.Random;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import intervalstore.api.IntervalI;
+import intervalstore.impl.SimpleFeature;
 
 /**
  * Does a number of pseudo-random (reproducible) tests of an NoNCList, to exercise
@@ -58,7 +60,7 @@ import org.testng.annotations.Test;
  * each deletion</li>
  * </ul>
  */
-public class NoNCListRandomisedTest
+public class NoNCListRandomisedTest3
 {
   /*
    * use a fixed random seed for reproducible test behaviour
@@ -82,7 +84,7 @@ public class NoNCListRandomisedTest
   @Test(groups = "Functional", dataProvider = "scalesOfLife")
   public void test_pseudoRandom(Integer scale)
   {
-    IntervalStore<SimpleFeature> ncl = new IntervalStore<>();
+    IntervalStore3<SimpleFeature> ncl = new IntervalStore3<>();
     List<SimpleFeature> features = new ArrayList<>(
             scale);
 
@@ -106,7 +108,7 @@ public class NoNCListRandomisedTest
    * @param ncl
    * @param features
    */
-  protected void testDelete_pseudoRandom(IntervalStore<SimpleFeature> ncl,
+  protected void testDelete_pseudoRandom(IntervalStore3<SimpleFeature> ncl,
           List<SimpleFeature> features)
   {
     int deleted = 0;
@@ -162,7 +164,7 @@ public class NoNCListRandomisedTest
    * @param features
    */
   protected void testAdd_pseudoRandom(Integer scale,
-          IntervalStore<SimpleFeature> ncl, List<SimpleFeature> features)
+          IntervalStore3<SimpleFeature> ncl, List<SimpleFeature> features)
   {
     int count = 0;
     final int size = 50;
@@ -221,7 +223,7 @@ public class NoNCListRandomisedTest
    *          a list of the ranges stored in ncl
    */
   protected void testFindOverlaps_pseudoRandom(
-          IntervalStore<SimpleFeature> ncl,
+          IntervalStore3<SimpleFeature> ncl,
           int scale, List<SimpleFeature> features)
   {
     int halfScale = scale / 2;
@@ -290,7 +292,7 @@ public class NoNCListRandomisedTest
    * @param to
    * @param features
    */
-  protected void verifyFindOverlaps(IntervalStore<SimpleFeature> ncl,
+  protected void verifyFindOverlaps(IntervalStore3<SimpleFeature> ncl,
           int from,
           int to, List<SimpleFeature> features)
   {
@@ -303,11 +305,11 @@ public class NoNCListRandomisedTest
     {
       int begin = sf.getBegin();
       int end = sf.getEnd();
-      // if (begin > to || end < from)
-      // {
-      // overlaps = ncl.findOverlaps(from, to);
-      // System.out.println("???");
-      // }
+      if (begin > to || end < from)
+      {
+        overlaps = ncl.findOverlaps(from, to);
+        System.out.println("???");
+      }
       assertTrue(begin <= to && end >= from,
               String.format(
                       "[%d, %d] does not overlap query range [%d, %d]",

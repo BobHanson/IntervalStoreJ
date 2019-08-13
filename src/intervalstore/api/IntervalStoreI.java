@@ -52,18 +52,11 @@ public interface IntervalStoreI<T extends IntervalI> extends Collection<T>
   List<T> findOverlaps(long from, long to);
 
   /**
-   * Returns a string representation of the data where containment is shown by
-   * indentation on new lines
+   * Ensures that the IntervalStore is ready for findOverlap.
    * 
-   * @return
-   */
-  String prettyPrint();
-
-  /**
-   * Answers true if the data held satisfy the rules of construction of an
-   * IntervalStore, else false.
+   * @return true iff the data held satisfy the rules of construction of an
+   *         IntervalStore.
    * 
-   * @return
    */
   boolean isValid();
 
@@ -79,5 +72,25 @@ public interface IntervalStoreI<T extends IntervalI> extends Collection<T>
    * @see NCList#getDepth()
    */
   int getDepth();
+
+  /**
+   * Return the number of top-level (not-contained) intervals.
+   * 
+   * @return
+   */
+  int getWidth();
+
+  List<T> findOverlaps(long start, long end, List<T> result);
+
+  String prettyPrint();
+
+  /**
+   * Resort and rebuild links.
+   * 
+   * @return
+   */
+  boolean revalidate();
+
+  IntervalI get(int i);
 
 }

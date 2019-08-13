@@ -29,95 +29,63 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package intervalstore.impl;
+package intervalstore.impl0;
 
-import intervalstore.api.IntervalI;
+import java.util.List;
+import java.util.function.Function;
 
 /**
- * A simplified feature instance sufficient for unit test purposes
+ * Provides a method to perform binary search of an ordered list for the first
+ * entry that satisfies a supplied condition
+ * 
+ * @author gmcarstairs
  */
-public class SimpleFeature implements IntervalI
+public final class BinarySearcher
 {
-  final private int begin;
-
-  final private int end;
-
-  private String description;
+  private BinarySearcher()
+  {
+  }
 
   /**
-   * Constructor
+   * Performs a binary search of the list to find the index of the first entry
+   * for which the test returns true. Answers the length of the list if there is
+   * no such entry.
+   * <p>
+   * For correct behaviour, the provided list must be ordered consistent with
+   * the test, that is, any entries returning false must precede any entries
+   * returning true. Note that this means that this method is <em>not</em>
+   * usable to search for equality (to find a specific entry), as all unequal
+   * entries will answer false to the test. To do that, use
+   * <code>Collections.binarySearch</code> instead.
    * 
-   * @param from
-   * @param to
-   * @param desc
+   * @param list
+   * @param test
+   * @return
+   * @see java.util.Collections#binarySearch(List, Object)
    */
-  public SimpleFeature(int from, int to, String desc)
+  public static <T> int findFirst(List<? extends T> list,
+          Function<T, Boolean> test)
   {
-    begin = from;
-    end = to;
-    description = desc;
-  }
-
-  /**
-   * Copy constructor
-   * 
-   * @param sf1
-   */
-  public SimpleFeature(SimpleFeature sf1)
-  {
-    this(sf1.begin, sf1.end, sf1.description);
-  }
-
-  @Override
-  public int getBegin()
-  {
-    return begin;
-  }
-
-  @Override
-  public int getEnd()
-  {
-    return end;
-  }
-
-  public String getDescription()
-  {
-    return description;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return begin + 37 * end
-            + (description == null ? 0 : description.hashCode());
-  }
-
-  /**
-   * Equals method that requires two instances to have the same description, as
-   * well as start and end position.
-   */
-  @Override
-  public boolean equals(Object obj)
-  {
-    if (obj != null && obj instanceof SimpleFeature)
+    int start = 0;
+    int end = list.size() - 1;
+    int matched = list.size();
+  
+    while (start <= end)
     {
-      SimpleFeature o = (SimpleFeature) obj;
-      if (this.begin == o.begin && this.end == o.end)
+      int mid = (start + end) / 2;
+      T entry = list.get(mid);
+      boolean itsTrue = test.apply(entry);
+      if (itsTrue)
       {
-        if (this.description == null)
-        {
-          return o.description == null;
-        }
-        return this.description.equals(o.description);
+        matched = mid;
+        end = mid - 1;
+      }
+      else
+      {
+        start = mid + 1;
       }
     }
-    return false;
+  
+    return matched;
   }
-
-  @Override
-  public String toString()
-  {
-    return begin + ":" + end + ":" + description;
-  }
-
 }

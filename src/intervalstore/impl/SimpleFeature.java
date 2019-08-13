@@ -29,68 +29,79 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package intervalstore.nonc;
+package intervalstore.impl;
 
-import java.util.Collection;
-import java.util.List;
-
-import intervalstore.impl.NCList;
-
-public interface IntervalStoreI<T extends IntervalI> extends Collection<T>
+/**
+ * A simplified feature instance sufficient for unit test purposes
+ */
+public class SimpleFeature extends Range
 {
 
+  private String description;
+
+
   /**
-   * Returns a (possibly empty) list of items whose extent overlaps the given
-   * range
+   * Constructor
    * 
    * @param from
-   *          start of overlap range (inclusive)
    * @param to
-   *          end of overlap range (inclusive)
-   * @return
+   * @param desc
    */
-  List<T> findOverlaps(long from, long to);
+  public SimpleFeature(int from, int to, String desc)
+  {
+    super(from, to);
+    description = desc;
+  }
 
   /**
-   * Ensures that the IntervalStore is ready for findOverlap.
+   * Copy constructor
    * 
-   * @return true iff the data held satisfy the rules of construction of an
-   *         IntervalStore.
-   * 
+   * @param sf1
    */
-  boolean isValid();
+  public SimpleFeature(SimpleFeature sf1)
+  {
+    this(sf1.start, sf1.end, sf1.description);
+  }
+
+  public String getDescription()
+  {
+    return description;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return start + 37 * end
+            + (description == null ? 0 : description.hashCode());
+  }
 
   /**
-   * Answers the level of nesting of intervals in the store, as
-   * <ul>
-   * <li>0 if the store is empty</li>
-   * <li>1 if all intervals are 'top level' (non nested)</li>
-   * <li>else 1 plus the depth of the enclosed NCList</li>
-   * </ul>
-   * 
-   * @return
-   * @see NCList#getDepth()
+   * Equals method that requires two instances to have the same description, as
+   * well as start and end position.
    */
-  int getDepth();
+  @Override
+  public boolean equals(Object obj)
+  {
+    if (obj != null && obj instanceof SimpleFeature)
+    {
+      SimpleFeature o = (SimpleFeature) obj;
+      if (this.start == o.start && this.end == o.end)
+      {
+        if (this.description == null)
+        {
+          return o.description == null;
+        }
+        return this.description.equals(o.description);
+      }
+    }
+    return false;
+  }
 
-  /**
-   * Return the number of top-level (not-contained) intervals.
-   * 
-   * @return
-   */
-  int getWidth();
+  @Override
+  public String toString()
+  {
+    return start + ":" + end + ":" + description;
+  }
 
-  List<T> findOverlaps(long start, long end, List<T> result);
-
-  String prettyPrint();
-
-  /**
-   * Resort and rebuild links.
-   * 
-   * @return
-   */
-  boolean revalidate();
-
-  IntervalI get(int i);
 
 }

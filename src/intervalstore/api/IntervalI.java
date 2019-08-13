@@ -88,12 +88,15 @@ public interface IntervalI
     }
   };
 
-  int getBegin();
+  static int NOT_CONTAINED = Integer.MIN_VALUE;
+  static int CONTAINMENT_UNKNOWN = 0;
 
+  int getBegin();
   int getEnd();
 
   /**
    * Answers true if this interval contains (or matches) the given interval
+   * based solely on start and end.
    * 
    * @param i
    * @return
@@ -153,5 +156,6 @@ public interface IntervalI
     Collections.sort(intervals,
             forwardStrand ? FORWARD_STRAND : REVERSE_STRAND);
   }
+
 
 }

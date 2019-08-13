@@ -42,6 +42,9 @@ import java.util.List;
 
 import org.testng.annotations.Test;
 
+import intervalstore.impl.Range;
+import intervalstore.impl.SimpleFeature;
+
 public class NoNCListIntervalStoreTest
 {
   @Test(enabled = true) // groups = "functional")
@@ -148,11 +151,11 @@ public class NoNCListIntervalStoreTest
     // Range r5 = new Range(40, 40);
     //// Range r6 = new Range(40, 40);
     //
-    assertTrue(r10.contains(r1));
-    assertTrue(r1.contains(r2));
-    assertTrue(r2.contains(r3));
-    assertTrue(r1.contains(r9));
-    assertTrue(!r1.contains(r5));
+    assertTrue(r10.containsInterval(r1));
+    assertTrue(r1.containsInterval(r2));
+    assertTrue(r2.overlapsInterval(r3));
+    assertFalse(r1.overlapsInterval(r9));
+    assertFalse(r1.containsInterval(r5));
 
     // assertNotNull(nonNested);
     // assertEquals(nonNested.size(), 5);
@@ -219,6 +222,7 @@ public class NoNCListIntervalStoreTest
     store.add(sf4);
     SimpleFeature sf5 = add(store, 35, 36);
 
+    System.out.println(store);
     List<SimpleFeature> overlaps = store.findOverlaps(1, 9);
     assertTrue(overlaps.isEmpty());
 
@@ -352,10 +356,10 @@ public class NoNCListIntervalStoreTest
     System.out.println(store);
     assertEquals(store.toString(),
             "1:50:Domain\n" + "\t4:15:Domain\n" + "\t\t5:15:Domain\n"
-                    + "\t\t\t7:7:Domain\n" + "\t\t\t10:19:Domain\n"
-                    + "\t\t\t\t10:19:Domain\n" + "\t\t\t\t\t10:21:Domain\n"
-                    + "\t\t\t\t\t\t10:20:Domain\n"
-                    + "\t\t\t\t\t\t\t10:20:Domain\n"
+                    + "\t\t\t7:7:Domain\n" + "\t\t\t10:21:Domain\n"
+                    + "\t\t\t\t10:20:Domain\n" + "\t\t\t\t\t10:20:Domain\n"
+                    + "\t\t\t\t\t\t10:19:Domain\n"
+                    + "\t\t\t\t\t\t\t10:19:Domain\n"
                     + "\t\t\t\t\t\t\t\t16:25:Domain\n"
                     + "\t30:40:Domain\n");
     SimpleFeature sf13 = new SimpleFeature(35, 55, type);
@@ -489,8 +493,8 @@ public class NoNCListIntervalStoreTest
     assertTrue(store.contains(sf7));
     store.revalidate();
     // sf4 has been removed
-    assertFalse(sf4.contains(sf5));
-    assertTrue(sf6.contains(sf4));
+    assertFalse(store.containsInterval(sf4, sf5));
+    assertFalse(store.containsInterval(sf6, sf4));
 
   }
 

@@ -40,7 +40,9 @@ import java.util.Random;
 
 import org.testng.annotations.Test;
 
-public class NoNCListBSTest
+import intervalstore.impl.Range;
+
+public class ISLinkBSTest2
 {
   @Test(enabled = true) // groups = "functional")
   public void test1()
@@ -49,9 +51,9 @@ public class NoNCListBSTest
      * no-arg constructor is not terribly interesting
      */
 
-    Range r1 = new Range(10, 100);
+    Range r1 = new Range(10, 80);
     Range r1a = new Range(10, 100);
-    Range r1b = new Range(10, 80);
+    Range r1b = new Range(10, 100);
     Range r2 = new Range(20, 30);
     Range r3 = new Range(35, 40);
 
@@ -65,10 +67,21 @@ public class NoNCListBSTest
     // add to a list in unsorted order so constructor has to sort
     List<Range> ranges = Arrays.asList(r1, r1a, r1b, r2, r3, r4, r4a, r4b,
             r5, r5b, r6, r7);
-    IntervalStore<Range> store = new IntervalStore<>(ranges);
+    IntervalStore2<Range> store = new IntervalStore2<>(ranges);
     System.out.println(store);
 
-    checkInterval(store, 86, 113, new Range[] { r1, r1a, r6 });
+    checkInterval(store, 57, 128,
+            new Range[]
+            { r1, r1a, r1b, r4, r5, r6, r7 });
+
+    checkInterval(store, 86, 113, new Range[] { r1a, r1b, r6 });
+
+    checkInterval(store, 14, 41, new Range[] { r1, r1a, r1b, r2, r3 });
+
+    checkInterval(store, 37, 37, new Range[] { r1, r1a, r1b, r3 });
+
+    checkInterval(store, -114, -41, new Range[] {});
+
 
     checkInterval(store, 71, 113, new Range[] { r1, r1a, r1b, r4, r6, r7 });
 
@@ -103,13 +116,15 @@ public class NoNCListBSTest
 
   }
 
-  private void checkInterval(IntervalStore<Range> store, int from, int to,
+  private void checkInterval(IntervalStore2<Range> store, int from, int to,
           Range[] target)
   {
     System.out.println("checking interval " + from + "-" + to);
+    for (int i = 0; i < target.length; i++)
+      System.out.println(">" + target[i]);
     List<Range> result = store.findOverlaps(from, to);
     for (int i = 0; i < result.size(); i++)
-      System.out.println(result.get(i));
+      System.out.println("<" + result.get(i));
     assertEquals(result.toArray(), target);
   }
 

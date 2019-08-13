@@ -29,7 +29,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package intervalstore.impl;
+package intervalstore.impl0;
 
 import java.util.AbstractCollection;
 import java.util.ArrayList;
@@ -215,8 +215,7 @@ public class IntervalStore<T extends IntervalI>
        * find the first stored interval which doesn't precede the new one
        */
       int insertPosition = BinarySearcher.findFirst(nonNested,
-              entry.getBegin(),
-              BinarySearcher.fbegin);
+              val -> val.getBegin() >= entry.getBegin());
       /*
        * fail if we detect interval enclosure 
        * - of the new interval by the one before or after it
@@ -224,8 +223,7 @@ public class IntervalStore<T extends IntervalI>
        */
       if (insertPosition > 0)
       {
-        if (nonNested.get(insertPosition - 1)
-                .properlyContainsInterval(entry))
+        if (nonNested.get(insertPosition - 1).properlyContainsInterval(entry))
         {
           return false;
         }
@@ -258,7 +256,7 @@ public class IntervalStore<T extends IntervalI>
 
     if (nested != null)
     {
-      nested.findOverlaps(from, to, result);
+      result.addAll(nested.findOverlaps(from, to));
     }
 
     return result;
@@ -270,7 +268,7 @@ public class IntervalStore<T extends IntervalI>
     String pp = nonNested.toString();
     if (nested != null)
     {
-      pp += '\n' + nested.prettyPrint();
+      pp += System.lineSeparator() + nested.prettyPrint();
     }
     return pp;
   }
@@ -359,14 +357,13 @@ public class IntervalStore<T extends IntervalI>
      * start position is not less than the target range start
      * (NB inequality test ensures the first match if any is found)
      */
-    int from = entry.getBegin();
-    int startIndex = BinarySearcher.findFirst(nonNested, from,
-            BinarySearcher.fbegin);
+    int startIndex = BinarySearcher.findFirst(nonNested,
+            val -> val.getBegin() >= entry.getBegin());
 
     /*
      * traverse intervals to look for a match
      */
-
+    int from = entry.getBegin();
     int i = startIndex;
     int size = nonNested.size();
     while (i < size)
@@ -431,14 +428,13 @@ public class IntervalStore<T extends IntervalI>
     /*
      * locate the first entry in the list which does not precede the interval
      */
-    int from = interval.getBegin();
-    int pos = BinarySearcher.findFirst(intervals, from,
-            BinarySearcher.fbegin);
+    int pos = BinarySearcher.findFirst(intervals,
+            val -> val.getBegin() >= interval.getBegin());
     int len = intervals.size();
     while (pos < len)
     {
       T sf = intervals.get(pos);
-      if (sf.getBegin() > from)
+      if (sf.getBegin() > interval.getBegin())
       {
         return false; // no match found
       }
@@ -485,19 +481,23 @@ public class IntervalStore<T extends IntervalI>
      * find the first interval whose end position is
      * after the target range start
      */
-    int startIndex = BinarySearcher.findFirst(nonNested, (int) from,
-            BinarySearcher.fend);
-    for (int i = startIndex, n = nonNested.size(); i < n; i++)
+    int startIndex = BinarySearcher.findFirst(nonNested,
+            val -> val.getEnd() >= from);
+
+    final int startIndex1 = startIndex;
+    int i = startIndex1;
+    while (i < nonNested.size())
     {
       T sf = nonNested.get(i);
       if (sf.getBegin() > to)
       {
         break;
       }
-      if (sf.getEnd() >= from)
+      if (sf.getBegin() <= to && sf.getEnd() >= from)
       {
         result.add(sf);
       }
+      i++;
     }
   }
 
@@ -507,8 +507,7 @@ public class IntervalStore<T extends IntervalI>
     String s = nonNested.toString();
     if (nested != null)
     {
-      s = s + '\n'// + System.lineSeparator()
-              + nested.toString();
+      s = s + System.lineSeparator() + nested.toString();
     }
     return s;
   }
@@ -516,27 +515,28 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public int getWidth()
   {
-    return (nonNested == null ? 0 : nonNested.size())
-            + (nested == null ? 0 : nested.size());
+    // TODO Auto-generated method stub
+    return 0;
   }
 
   @Override
   public List<T> findOverlaps(long start, long end, List<T> result)
   {
-    return findOverlaps(start, end, new ArrayList<T>());
+    // TODO Auto-generated method stub
+    return null;
   }
 
   @Override
   public boolean revalidate()
   {
-    // not applicable
-    return true;
+    // TODO Auto-generated method stub
+    return false;
   }
 
   @Override
   public IntervalI get(int i)
   {
-    // not supported (but could be)
+    // TODO Auto-generated method stub
     return null;
   }
 }

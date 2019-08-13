@@ -41,19 +41,21 @@ import java.util.List;
 import intervalstore.api.IntervalI;
 import intervalstore.api.IntervalStoreI;
 
+
+// working - 333 ms
+
 /**
  * 
- * A second idea, doing a double binary sort for the full interval. Seemed like
- * a good idea, but is 50% slower.
  * 
  * A Collection class to store interval-associated data, with options for "lazy"
  * sorting so as to speed incremental construction of the data prior to issuing
  * a findOverlap call.
  * 
  * 
+ * with O(log N) performance for overlap queries, insertion and deletion (where
+ * N is the size of the store).
+ * 
  * Accepts duplicate entries but not null values.
- * 
- * 
  * 
  * @author Bob Hanson 2019.08.06
  *
@@ -65,24 +67,67 @@ public class IntervalStore<T extends IntervalI>
         extends AbstractCollection<T> implements IntervalStoreI<T>
 {
 
-
   /**
-   * Search for the LAST interval that starts within or before the query
-   * interval.
+   * Search for the ANY overlapping interval. The innovation here is to take
+   * advantage of the fact that we are searching for intervals, not just
+   * numbers. We can match any overlapping interval of any sort, because all
+   * overlapping intervals are contiguous.
+   * 
+   * So once we find one, we have found all of them. We just might be in the
+   * middle of them. The containedBy linked list gets us the backward set, and
+   * our ordered array gets us the forward set.
+   * 
+   * Basically, we have established a binary partition tree that we can navigate
+   * easily.
+   * 
    * 
    * 
    * @param a
+   * @param from
    * @param to
    * @return the matching index, or -1 if there is no match
    */
-  public static int binaryLastBeginSearch(IntervalI[] a, long to)
+  public static int binaryAnyIntervalSearch(IntervalI[] a, long from,
+          long to)
   {
     int start = 0;
-    int matched = -1;
-
     int end = a.length - 1;
     while (start <= end)
     {
+      int mid = (start + end) >>> 1;
+      if (a[mid].getEnd() >= from)
+      {
+        if (a[mid].getBegin() <= to)
+          return mid;
+        end = mid - 1;
+      }
+      else
+      {
+        start = mid + 1;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Search for the LAST overlapping interval. This is useful when we do not
+   * have an NCList
+   * 
+   * 
+   * @param a
+   * @param from
+   * @param to
+   * @return the matching index, or -1 if there is no match
+   */
+  public static int binaryLastIntervalSearch(IntervalI[] a, long from,
+          long to)
+  {
+    int start = 0;
+    int matched = -1;
+    int end = a.length - 1;
+    while (start <= end)
+    {
+      ntest1++;
       int mid = (start + end) >>> 1;
       IntervalI e = a[mid];
       if (e.getBegin() > to)
@@ -91,8 +136,8 @@ public class IntervalStore<T extends IntervalI>
       }
       else
       {
-        matched = mid;
-        start = mid + 1;
+          matched = mid;
+          start = mid + 1;
       }
 
     }
@@ -105,12 +150,7 @@ public class IntervalStore<T extends IntervalI>
   private Comparator<? super IntervalI> icompare;
 
   /**
-   * bigendian is what NCList does; change icompare to switch to that; however,
-   * realize that we use littleendian for the reason that then of two ranges
-   * that start at the same position, the one that is longer will be after the
-   * first -- maintaining the monotonic nature of the list, and allowing us to
-   * terminate the reverse link traversal earlier
-   * 
+   * bigendian is what NCList does; change icompare to switch to that
    */
   private boolean bigendian;
 
@@ -313,6 +353,22 @@ public class IntervalStore<T extends IntervalI>
     maxStart = Integer.MIN_VALUE;
   }
 
+  // /**
+  // * Compare an interval t to a from/to range.
+  // *
+  // * @param t
+  // * @param from
+  // * @param to
+  // * @return -1 if t comes before range, 1 if after, 0 if overlapping
+  // */
+  // private int compareOverlap(T t, long from, long to)
+  // {
+  // int order = Long.signum(t.getBegin() - from);
+  // return (order == 0
+  // ? Long.signum(bigendian ? to - t.getEnd() : t.getEnd() - to)
+  // : order);
+  // }
+
   /**
    * Compare an interval t to a from/to range for insertion purposes
    * 
@@ -330,26 +386,10 @@ public class IntervalStore<T extends IntervalI>
             ? Long.signum(bigendian ? to - t.getEnd() : t.getEnd() - to)
             : order);
   }
-
   @Override
   public boolean contains(Object entry)
   {
     return listContains(intervals, entry);
-  }
-
-  public boolean containsInterval(IntervalI outer, IntervalI inner)
-  {
-    ensureFinalized();
-    int index = binaryIdentitySearch(intervals, inner);
-    if (index >= 0)
-      while ((index = index - Math.abs(offsets[index])) >= 0)
-      {
-        if (ordered[index] == outer)
-        {
-          return true;
-        }
-      }
-    return false;
   }
 
   private void ensureFinalized()
@@ -369,6 +409,7 @@ public class IntervalStore<T extends IntervalI>
     }
   }
 
+
   /**
    * Find all overlaps within the given range, inclusively.
    * 
@@ -386,9 +427,11 @@ public class IntervalStore<T extends IntervalI>
   /**
    * Find all overlaps within the given range, inclusively.
    * 
-   * @return a list sorted in descen ntest++; ding order of start position
+   * @return a list sorted in descending order of start position
    * 
    */
+
+  static public int ntest, ntest1;
 
   @SuppressWarnings("unchecked")
   @Override
@@ -416,33 +459,44 @@ public class IntervalStore<T extends IntervalI>
 
     if (from > maxEnd || to < minStart)
       return result;
-
-    int index = binaryLastBeginSearch(ordered, to);
-    IntervalI sf = null;
-    while (index >= 0 && (sf = ordered[index]).getBegin() >= from)
-    {
-      result.add((T) sf);
-      index--;
-    }
+    int index = binaryLastIntervalSearch(ordered, from, to);
     if (index < 0)
       return result;
-    boolean isMonotonic = false;
-    while (true)
+    int pt = index + 1;
+    while (index != IntervalI.NOT_CONTAINED)
     {
-      if (sf.getEnd() >= from)
+      ntest++;
+
+      IntervalI sf = ordered[index];
+      if (sf.getBegin() >= from)
       {
+        // fully contained -- take all
+        while (--pt > index)
+        {
+          result.add((T) ordered[pt]);
+        }
         result.add((T) sf);
       }
-      else if (isMonotonic)
+      else if (sf.getEnd() >= from)
       {
-        break;
+        // partially contained
+
+        // fill in the gaps only if the first partially contained interval
+
+        while (--pt > index)
+        {
+          T t = (T) ordered[pt];
+          if (t.getEnd() >= from)
+          {
+            result.add(t);
+          }
+        }
+        pt = 0; // no more gap filling
+        result.add((T) sf);
       }
       int offset = offsets[index];
-      isMonotonic = (offset < 0);
-      index -= (isMonotonic ? -offset : offset);
-      if (index < 0)
-        break;
-        sf = ordered[index];
+      index = (offset == IntervalI.NOT_CONTAINED ? offset
+              : index - Math.abs(offset));
     }
     return result;
   }
@@ -456,16 +510,17 @@ public class IntervalStore<T extends IntervalI>
 
   private int getContainedBy(int index, int begin)
   {
-    while (index >= 0)
+    int offset = 0;
+    while (offset != IntervalI.NOT_CONTAINED)
     {
       IntervalI sf = ordered[index];
-      if (sf.getEnd() >= begin)
+      if (begin <= sf.getEnd())
       {
         // System.out.println("\nIS found " + sf0.getIndex1() + ":" + sf0
         // + "\nFS in " + sf.getIndex1() + ":" + sf);
         return index;
       }
-      index -= Math.abs(offsets[index]);
+      index -= (offset = offsets[index]);
     }
     return IntervalI.NOT_CONTAINED;
   }
@@ -491,10 +546,10 @@ public class IntervalStore<T extends IntervalI>
       int depth = 1;
       int index = i;
       int offset;
-      while ((index = index - Math.abs(offset = offsets[index])) >= 0)
+      while ((offset = offsets[index]) != IntervalI.NOT_CONTAINED)
       {
-        element = ordered[index];
-        if (++depth > maxDepth && (element == root || offset < 0))
+        element = ordered[index = index - offset];
+        if (++depth > maxDepth && element == root)
         {
           maxDepth = depth;
           break;
@@ -511,7 +566,7 @@ public class IntervalStore<T extends IntervalI>
     int w = 0;
     for (int i = offsets.length; --i >= 0;)
     {
-      if (offsets[i] > 0)
+      if (offsets[i] == IntervalI.NOT_CONTAINED)
       {
         w++;
       }
@@ -549,7 +604,6 @@ public class IntervalStore<T extends IntervalI>
     {
       return;
     }
-    boolean isMonotonic = true;
     for (int i = 1; i < n; i++)
     {
       IntervalI sf = features[i];
@@ -558,10 +612,8 @@ public class IntervalStore<T extends IntervalI>
         // System.out.println(sf + " is contained by "
       // + (index < 0 ? null : starts[index]));
 
-      offsets[i] = (index < 0 ? IntervalI.NOT_CONTAINED
-              : isMonotonic ? index - i : i - index);
-      isMonotonic = (sf.getEnd() > maxEnd);
-      if (isMonotonic)
+      offsets[i] = (index < 0 ? IntervalI.NOT_CONTAINED : i - index);
+      if (sf.getEnd() > maxEnd)
       {
         maxEnd = sf.getEnd();
       }
@@ -606,9 +658,13 @@ public class IntervalStore<T extends IntervalI>
     {
       IntervalI range = ordered[i];
       int index = i;
-      while ((index = index - Math.abs(offsets[index])) >= 0)
+      int offset = offsets[i];
+      while (offset != IntervalI.CONTAINMENT_UNKNOWN
+              && offset != IntervalI.NOT_CONTAINED)
       {
         sb.append(sep);
+        index -= Math.abs(offset);
+        offset = offsets[index];
       }
       sb.append(range.toString()).append('\n');
     }
@@ -679,6 +735,24 @@ public class IntervalStore<T extends IntervalI>
   public String toString()
   {
     return prettyPrint();
+  }
+
+  public boolean containsInterval(IntervalI outer, IntervalI inner)
+  {
+    ensureFinalized();
+    int index = binaryIdentitySearch(intervals, inner);
+    if (index < 0)
+      return false;
+    int offset;
+    while ((offset = offsets[index]) != IntervalI.CONTAINMENT_UNKNOWN
+            && offset != IntervalI.NOT_CONTAINED)
+    {
+      index -= offset;
+      inner = ordered[index];
+      if (inner == outer)
+        return true;
+    }
+    return false;
   }
 
 }

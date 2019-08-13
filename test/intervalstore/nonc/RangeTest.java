@@ -31,111 +31,54 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package intervalstore.nonc;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.fail;
 
-/**
- * An immutable data bean that models a start-end range
- */
-public class Range implements IntervalI
+import java.util.Comparator;
+
+import org.testng.annotations.Test;
+
+import intervalstore.api.IntervalI;
+import intervalstore.impl.Range;
+
+public class RangeTest
 {
 
-  // no need for final here; these can be fully mutable as long as
-  // store.revalidate() is run afterwords
-
-  public int start;
-
-  public int end;
-
-  public int index;
-
-  @Override
-  public int getIndex()
+  @Test(groups = "Functional")
+  public void testCompare()
   {
-    return index;
-  }
+    Comparator<? super IntervalI> comp = IntervalI.COMPARATOR_BIGENDIAN;
 
-  @Override
-  public void setIndex(int i)
-  {
-    index = i;
-  }
+    // same position, same length
+    assertEquals(comp.compare(new Range(10, 20), new Range(10, 20)), 0);
 
-  private IntervalI containedBy;
+    // same position, len1 > len2
+    assertEquals(comp.compare(new Range(10, 20), new Range(10, 19)), -1);
 
-  @Override
-  public int getBegin()
-  {
-    return start;
-  }
+    // same position, len1 < len2
+    assertEquals(comp.compare(new Range(10, 20), new Range(10, 21)), 1);
 
-  @Override
-  public int getEnd()
-  {
-    return end;
-  }
+    // pos1 > pos2
+    assertEquals(comp.compare(new Range(11, 20), new Range(10, 20)), 1);
 
-  public Range(int i, int j)
-  {
-    start = i;
-    end = j;
-  }
-
-  @Override
-  public String toString()
-  {
-    return String.valueOf(start) + "-" + String.valueOf(end);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return start * 31 + end;
-  }
-
-  @Override
-  public boolean equals(Object obj)
-  {
-    if (obj instanceof Range)
+    // pos1 < pos2
+    assertEquals(comp.compare(new Range(10, 20), new Range(11, 11)), -1);
+    
+    try {
+      comp.compare(new Range(10, 20), null);
+      fail("Expected exception");
+    } catch (NullPointerException e)
     {
-      Range r = (Range) obj;
-      return (start == r.start && end == r.end);
+      // expected
     }
-    return false;
-  }
 
-  @Override
-  public IntervalI getContainedBy()
-  {
-    // TODO Auto-generated method stub
-    return containedBy;
-  }
-
-  @Override
-  public void setContainedBy(IntervalI containedBy)
-  {
-    this.containedBy = containedBy;
-
-  }
-
-  public void setStart(int pos)
-  {
-    start = pos;
-  }
-
-  public void setEnd(int pos)
-  {
-    end = pos;
-  }
-
-  public boolean contains(Range r1)
-  {
-    IntervalI container = r1.getContainedBy();
-    while (container != null)
+    try
     {
-      if (container == this)
-        return true;
-      container = container.getContainedBy();
+      comp.compare(null, new Range(10, 20));
+      fail("Expected exception");
+    } catch (NullPointerException e)
+    {
+      // expected
     }
-    return false;
   }
-
 }

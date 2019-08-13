@@ -36,7 +36,10 @@ import static org.testng.Assert.assertTrue;
 
 import org.testng.annotations.Test;
 
-public class NoNCListIntervalTest
+import intervalstore.api.IntervalI;
+import intervalstore.impl.Range;
+
+public class IntervalITest
 {
   @Test(groups="Functional")
   public void testContainsInterval()

@@ -41,7 +41,9 @@ import java.util.NoSuchElementException;
 
 import org.testng.annotations.Test;
 
-public class NoNCListIntervalIteratorTest
+import intervalstore.impl.Range;
+
+public class ISLinkIntervalIteratorTest1
 {
   @Test(groups = "Functional")
   public void testNext()
