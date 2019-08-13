@@ -1,0 +1,63 @@
+[RemoteTestNG] detected TestNG version 6.14.2
+Java version: 1.8.0_191
+amd64 Windows 10 10.0
+
+Test             	size N 	tests	time/ms	rate/(N/ms)	time stderr	rate stderr
+# Query IntStoreNCList store interval size 50 store sequence factor 4 query width -1 query count 100000
+IntStoreNCList query	2154	10	57.3	38.8	3.53	2.21
+IntStoreNCList query	4641	10	52.4	88.6	0.69	1.15
+IntStoreNCList query	10000	10	60.2	166.2	0.38	1.04
+IntStoreNCList query	21544	10	86.6	260.6	7.25	15.70
+IntStoreNCList query	46415	10	96.3	482.2	1.04	4.94
+IntStoreNCList query	100000	10	138.1	737.8	6.36	34.27
+IntStoreNCList query	215443	10	172.9	1256.1	4.62	41.87
+IntStoreNCList query	464158	10	218.8	2123.8	2.28	24.09
+# dimensions [9 464158]
+# Query IntStoreLink store interval size 50 store sequence factor 4 query width -1 query count 100000
+IntStoreLink query	2154	10	32.0	68.4	1.48	2.40
+IntStoreLink query	4641	10	32.9	141.7	0.75	2.87
+IntStoreLink query	10000	10	38.3	262.6	1.14	6.35
+IntStoreLink query	21544	10	43.1	499.7	0.18	2.02
+IntStoreLink query	46415	10	48.2	963.3	0.57	10.37
+IntStoreLink query	100000	10	65.6	1537.5	2.27	41.79
+IntStoreLink query	215443	10	95.6	2256.4	1.24	31.73
+IntStoreLink query	464158	10	134.4	3465.9	2.92	64.51
+# dimensions [4351 300807]
+# Query IntStoreLink2 store interval size 50 store sequence factor 4 query width -1 query count 100000
+IntStoreLink2 query	2154	10	32.1	67.8	1.21	2.18
+IntStoreLink2 query	4641	10	32.6	142.7	0.32	1.33
+IntStoreLink2 query	10000	10	38.4	261.2	0.79	4.87
+IntStoreLink2 query	21544	10	42.9	501.8	0.11	1.33
+IntStoreLink2 query	46415	10	47.6	975.9	0.09	1.80
+IntStoreLink2 query	100000	10	62.2	1608.9	0.31	7.85
+IntStoreLink2 query	215443	10	92.8	2321.0	0.22	5.56
+IntStoreLink2 query	464158	10	129.7	3588.5	2.38	57.99
+# dimensions [4351 300807]
+# Query NCList store interval size 50 store sequence factor 4 query width -1 query count 100000
+NCList query	2154	10	41.8	51.7	0.87	0.99
+NCList query	4641	10	46.3	100.3	0.13	0.28
+NCList query	10000	10	54.8	182.5	0.21	0.69
+NCList query	21544	10	72.8	295.9	0.13	0.54
+NCList query	46415	10	105.4	454.3	5.85	28.68
+NCList query	100000	10	125.8	800.0	2.98	23.35
+NCList query	215443	10	150.8	1445.6	4.93	57.81
+NCList query	464158	10	178.9	2634.7	7.03	115.23
+# dimensions [8 155504]
+
+PASSED: testLoadTimeBulk
+PASSED: testLoadTimeIncrementalAllowDulicates
+PASSED: testLoadTimeIncrementalNoDuplicates
+PASSED: testQueryTime
+PASSED: testRemoveTime
+
+===============================================
+    Default test
+    Tests run: 5, Failures: 0, Skips: 0
+===============================================
+
+
+===============================================
+Default suite
+Total tests run: 5, Failures: 0, Skips: 0
+===============================================
+

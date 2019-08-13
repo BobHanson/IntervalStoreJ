@@ -29,7 +29,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package intervalstore.impl;
+package intervalstore.impl0;
 
 import java.util.Iterator;
 import java.util.List;
@@ -168,7 +168,7 @@ class NCNode<T extends IntervalI> implements IntervalI
     sb.append(region.toString());
     if (subregions != null)
     {
-      sb.append('\n');// System.lineSeparator());
+      sb.append(System.lineSeparator());
       subregions.prettyPrint(sb, offset + 2, indent);
     }
   }
@@ -362,5 +362,4 @@ class NCNode<T extends IntervalI> implements IntervalI
     }
     return false;
   }
-
 }

@@ -29,74 +29,63 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package intervalstore.impl;
+package intervalstore.impl0;
 
-import intervalstore.api.IntervalI;
+import java.util.List;
+import java.util.function.Function;
 
 /**
- * An immutable data bean that models a start-end range
+ * Provides a method to perform binary search of an ordered list for the first
+ * entry that satisfies a supplied condition
+ * 
+ * @author gmcarstairs
  */
-public class Range implements IntervalI
+public final class BinarySearcher
 {
-
-  // no need for final here; these can be fully mutable as long as
-  // store.revalidate() is run afterwords
-
-  public int start;
-
-  public int end;
-
-
-  @Override
-  public int getBegin()
+  private BinarySearcher()
   {
-    return start;
   }
 
-  @Override
-  public int getEnd()
+  /**
+   * Performs a binary search of the list to find the index of the first entry
+   * for which the test returns true. Answers the length of the list if there is
+   * no such entry.
+   * <p>
+   * For correct behaviour, the provided list must be ordered consistent with
+   * the test, that is, any entries returning false must precede any entries
+   * returning true. Note that this means that this method is <em>not</em>
+   * usable to search for equality (to find a specific entry), as all unequal
+   * entries will answer false to the test. To do that, use
+   * <code>Collections.binarySearch</code> instead.
+   * 
+   * @param list
+   * @param test
+   * @return
+   * @see java.util.Collections#binarySearch(List, Object)
+   */
+  public static <T> int findFirst(List<? extends T> list,
+          Function<T, Boolean> test)
   {
-    return end;
-  }
-
-  public Range(int i, int j)
-  {
-    start = i;
-    end = j;
-  }
-
-  @Override
-  public String toString()
-  {
-    return String.valueOf(start) + "-" + String.valueOf(end);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return start * 31 + end;
-  }
-
-  @Override
-  public boolean equals(Object obj)
-  {
-    if (obj instanceof Range)
+    int start = 0;
+    int end = list.size() - 1;
+    int matched = list.size();
+  
+    while (start <= end)
     {
-      Range r = (Range) obj;
-      return (start == r.start && end == r.end);
+      int mid = (start + end) / 2;
+      T entry = list.get(mid);
+      boolean itsTrue = test.apply(entry);
+      if (itsTrue)
+      {
+        matched = mid;
+        end = mid - 1;
+      }
+      else
+      {
+        start = mid + 1;
+      }
     }
-    return false;
+  
+    return matched;
   }
-
-  public void setStart(int pos)
-  {
-    start = pos;
-  }
-
-  public void setEnd(int pos)
-  {
-    end = pos;
-  }
-
-
 }

@@ -74,9 +74,11 @@ public class TimingTests2
 
   private static final boolean QUERY_ONLY = true;
 
-  private static final float MAX_MS = 1000;
+  private static final float MAX_NS = 1000000000;
 
   private static final int QUERY_STORE_INTERVAL_SIZE = 50;
+
+  private static final int QUERY_COUNT = 100000;
 
   private static final int QUERY_STORE_SIZE_FACTOR = 10;
   // 0 for maxLength; 1
@@ -186,9 +188,9 @@ public class TimingTests2
       for (int i = 0; i < REPEATS + WARMUPS; i++)
       {
         List<Range> ranges = generateIntervals(count);
-        long now = System.currentTimeMillis();
+        long now = System.nanoTime();
         NCList<Range> ncl = new NCList<>(ranges);
-        long elapsed = System.currentTimeMillis() - now;
+        long elapsed = System.nanoTime() - now;
         if (i >= WARMUPS)
         {
           data[i - WARMUPS] = elapsed;
@@ -265,10 +267,10 @@ public class TimingTests2
       {
         List<Range> simple = new ArrayList<>();
         List<Range> ranges = generateIntervals(count);
-        long now = System.currentTimeMillis();
+        long now = System.nanoTime();
         simple.addAll(ranges);
         simple.sort(simpleComp);
-        long elapsed = System.currentTimeMillis() - now;
+        long elapsed = System.nanoTime() - now;
         if (i >= WARMUPS)
         {
           data[i - WARMUPS] = elapsed;
@@ -294,7 +296,7 @@ public class TimingTests2
       {
         List<Range> simple = new ArrayList<>();
         List<Range> ranges = generateIntervals(count);
-        long now = System.currentTimeMillis();
+        long now = System.nanoTime();
         for (int ir = 0; ir < count; ir++)
         {
           Range r = ranges.get(ir);
@@ -304,7 +306,7 @@ public class TimingTests2
           }
         }
         simple.sort(simpleComp);
-        long elapsed = System.currentTimeMillis() - now;
+        long elapsed = System.nanoTime() - now;
         if (i >= WARMUPS)
         {
           data[i - WARMUPS] = elapsed;
@@ -345,7 +347,7 @@ public class TimingTests2
     {
       NCList<Range> ncl = new NCList<>();
       List<Range> ranges = generateIntervals(count);
-      long now = System.currentTimeMillis();
+      long now = System.nanoTime();
       for (int ir = 0; ir < count; ir++)
       {
         Range r = ranges.get(ir);
@@ -354,7 +356,7 @@ public class TimingTests2
           ncl.add(r);
         }
       }
-      long elapsed = System.currentTimeMillis() - now;
+      long elapsed = System.nanoTime() - now;
       if (i >= WARMUPS)
       {
         data[i - WARMUPS] = elapsed;
@@ -381,20 +383,20 @@ public class TimingTests2
         List<Range> ranges = generateIntervals(count,
                 QUERY_STORE_INTERVAL_SIZE);
         NCList<Range> ncl = new NCList<>(ranges);
-        List<Range> queries = generateIntervals(count);
+        List<Range> queries = generateIntervals(QUERY_COUNT);
 
         if (k == LOG_0 && i == 0)
           System.out.println("Query interval " + QUERY_STORE_INTERVAL_SIZE
                   + " factor " + QUERY_STORE_SIZE_FACTOR + " dimensions ["
                   + ncl.getDepth() + " ?]");
 
-        long now = System.currentTimeMillis();
-        for (int ir = 0; ir < count; ir++)
+        long now = System.nanoTime();
+        for (int ir = 0; ir < QUERY_COUNT; ir++)
         {
           Range q = queries.get(ir);
           ncl.findOverlaps(q.getBegin(), q.getEnd());
         }
-        long elapsed = System.currentTimeMillis() - now;
+        long elapsed = System.nanoTime() - now;
         if (i >= WARMUPS)
         {
           data[i - WARMUPS] = elapsed;
@@ -446,7 +448,8 @@ public class TimingTests2
     double rateMean = totRate / data.length;
     double rateStderr = standardError(rate, rateMean);
     String line = String.format("%s\t%d\t%d\t%.1f\t%.1f\t%.2f\t%.2f",
-            testName, count, REPEATS, mean, rateMean, stderr, rateStderr);
+            testName, count, REPEATS, mean / 1000000, rateMean * 1000000,
+            stderr / 1000000, rateStderr * 1000000);
     if (LOG_RAW_DATA)
     {
       averages.append(line);
@@ -455,7 +458,7 @@ public class TimingTests2
     {
       System.out.println(line);
     }
-    return mean < MAX_MS;
+    return mean < MAX_NS;
   }
 
   /**
@@ -474,13 +477,13 @@ public class TimingTests2
         List<Range> ranges = generateIntervals(count,
                 QUERY_STORE_INTERVAL_SIZE);
 
-        List<Range> queries = generateIntervals(count);
-        long now = System.currentTimeMillis();
-        for (int iq = 0; iq < count; iq++)
+        List<Range> queries = generateIntervals(QUERY_COUNT);
+        long now = System.nanoTime();
+        for (int iq = 0; iq < QUERY_COUNT; iq++)
         {
           findOverlaps(ranges, queries.get(iq));
         }
-        long elapsed = System.currentTimeMillis() - now;
+        long elapsed = System.nanoTime() - now;
         if (i >= WARMUPS)
         {
           data[i - WARMUPS] = elapsed;
@@ -532,7 +535,7 @@ public class TimingTests2
     {
       IntervalStore<Range> ncl = new IntervalStore<>();
       List<Range> ranges = generateIntervals(count);
-      long now = System.currentTimeMillis();
+      long now = System.nanoTime();
       for (int ir = 0; ir < count; ir++)
       {
         Range r = ranges.get(ir);
@@ -541,7 +544,7 @@ public class TimingTests2
           ncl.add(r);
         }
       }
-      long elapsed = System.currentTimeMillis() - now;
+      long elapsed = System.nanoTime() - now;
       if (i >= WARMUPS)
       {
         data[i - WARMUPS] = elapsed;
@@ -566,9 +569,9 @@ public class TimingTests2
       for (int i = 0; i < REPEATS + WARMUPS; i++)
       {
         List<Range> ranges = generateIntervals(count);
-        long now = System.currentTimeMillis();
+        long now = System.nanoTime();
         new IntervalStore<>(ranges);
-        long elapsed = System.currentTimeMillis() - now;
+        long elapsed = System.nanoTime() - now;
         if (i >= WARMUPS)
         {
           data[i - WARMUPS] = elapsed;
@@ -626,20 +629,20 @@ public class TimingTests2
                 QUERY_STORE_INTERVAL_SIZE);
         IntervalStore<Range> ncl = new IntervalStore<>(ranges);
   
-        List<Range> queries = generateIntervals(count);
+        List<Range> queries = generateIntervals(QUERY_COUNT);
 
         if (j == LOG_0 && i == 0)
           System.out.println("Query interval " + QUERY_STORE_INTERVAL_SIZE
                   + " factor " + QUERY_STORE_SIZE_FACTOR + " dimensions ["
                   + ncl.getDepth() + " ?]");
 
-        long now = System.currentTimeMillis();
-        for (int ir = 0; ir < count; ir++)
+        long now = System.nanoTime();
+        for (int ir = 0; ir < QUERY_COUNT; ir++)
         {
           Range q= queries.get(ir); 
           ncl.findOverlaps(q.getBegin(), q.getEnd());
         }
-        long elapsed = System.currentTimeMillis() - now;
+        long elapsed = System.nanoTime() - now;
         if (i >= WARMUPS)
         {
           data[i - WARMUPS] = elapsed;
@@ -678,12 +681,12 @@ public class TimingTests2
          * remove intervals picked pseudo-randomly; attempts to remove the
          * same interval may fail but that doesn't affect the test timings
          */
-        long now = System.currentTimeMillis();
+        long now = System.nanoTime();
         for (int j = 0; j < deleteCount; j++)
         {
           ncl.remove(list[this.rand.nextInt(count)]);
         }
-        long elapsed = System.currentTimeMillis() - now;
+        long elapsed = System.nanoTime() - now;
         if (i >= WARMUPS)
         {
           data[i - WARMUPS] = elapsed;
@@ -720,13 +723,13 @@ public class TimingTests2
          * remove intervals picked pseudo-randomly; attempts to remove the
          * same interval may fail but that doesn't affect the test timings
          */
-        long now = System.currentTimeMillis();
+        long now = System.nanoTime();
         for (int j = 0; j < deleteCount; j++)
         {
           Range toDelete = ranges.get(this.rand.nextInt(count));
           ncl.remove(toDelete);
         }
-        long elapsed = System.currentTimeMillis() - now;
+        long elapsed = System.nanoTime() - now;
         if (i >= WARMUPS)
         {
           data[i - WARMUPS] = elapsed;
@@ -763,12 +766,12 @@ public class TimingTests2
         /*
          * remove list entries picked pseudo-randomly
          */
-        long now = System.currentTimeMillis();
+        long now = System.nanoTime();
         for (int id = deleteCount; --id >= 0;)
         {
           ranges.remove(toDelete[id]);
         }
-        long elapsed = System.currentTimeMillis() - now;
+        long elapsed = System.nanoTime() - now;
         if (i >= WARMUPS)
         {
           data[i - WARMUPS] = elapsed;

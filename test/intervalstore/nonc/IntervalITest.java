@@ -39,7 +39,7 @@ import org.testng.annotations.Test;
 import intervalstore.api.IntervalI;
 import intervalstore.impl.Range;
 
-public class NoNCListIntervalTest
+public class IntervalITest
 {
   @Test(groups="Functional")
   public void testContainsInterval()

@@ -60,7 +60,7 @@ import intervalstore.impl.SimpleFeature;
  * each deletion</li>
  * </ul>
  */
-public class NoNCListRandomisedTest
+public class ISLinkRandomisedTest1
 {
   /*
    * use a fixed random seed for reproducible test behaviour

@@ -29,7 +29,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package intervalstore.impl;
+package intervalstore.impl0;
 
 import java.util.AbstractCollection;
 import java.util.ArrayList;
@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import intervalstore.api.IntervalI;
+import intervalstore.impl.Range;
 
 /**
  * An adapted implementation of NCList as described in the paper
@@ -52,9 +53,6 @@ import intervalstore.api.IntervalI;
  */
 public class NCList<T extends IntervalI> extends AbstractCollection<T>
 {
-
-  private static final boolean OPTION_FIND_ANY = false;
-
   /**
    * A depth-first iterator over the elements stored in the NCList
    */
@@ -202,7 +200,7 @@ public class NCList<T extends IntervalI> extends AbstractCollection<T>
      * sort by start ascending, length descending, so that
      * contained intervals follow their containing interval
      */
-    Collections.sort(ranges, IntervalI.COMPARATOR_BIGENDIAN);
+    Collections.sort(ranges, new NCListBuilder<>().getComparator());
 
     int listStartIndex = 0;
 
@@ -383,7 +381,7 @@ public class NCList<T extends IntervalI> extends AbstractCollection<T>
 
     int to = interval.getEnd();
 
-    for (int i = candidateIndex, n = subranges.size(); i < n; i++)
+    for (int i = candidateIndex; i < subranges.size(); i++)
     {
       NCNode<T> candidate = subranges.get(i);
       if (candidate.getBegin() > to)
@@ -457,52 +455,15 @@ public class NCList<T extends IntervalI> extends AbstractCollection<T>
    * @param to
    * @param result
    */
-  protected List<T> findOverlaps(long from, long to, List<T> result)
+  protected void findOverlaps(long from, long to, List<T> result)
   {
-
-    if (OPTION_FIND_ANY)
-    {
-      return findAnyOverlaps(from, to, result);
-    }
     /*
      * find the first sublist that might overlap, i.e. 
      * the first whose end position is >= from
      */
     int candidateIndex = findFirstOverlap(from);
 
-    for (int i = candidateIndex, n = subranges.size(); i < n; i++)
-    {
-      NCNode<T> candidate = subranges.get(i);
-      if (candidate.getBegin() > to)
-      {
-        /*
-         * we are past the end of our target range
-         */
-        break;
-      }
-      candidate.findOverlaps(from, to, result);
-    }
-    return result;
-  }
-  
-  /**
-   * Recursively searches the NCList adding any items that overlap the from-to
-   * range to the result list
-   * 
-   * @param from
-   * @param to
-   * @param result
-   */
-  protected List<T> findAnyOverlaps(long from, long to, List<T> result)
-  {
-
-    // BH find ANY overlap
-
-    int candidateIndex = findAnyOverlap(subranges, from, to);
-
-    if (candidateIndex < 0)
-      return result;
-    for (int i = candidateIndex, n = subranges.size(); i < n; i++)
+    for (int i = candidateIndex; i < subranges.size(); i++)
     {
       NCNode<T> candidate = subranges.get(i);
       if (candidate.getBegin() > to)
@@ -515,40 +476,6 @@ public class NCList<T extends IntervalI> extends AbstractCollection<T>
       candidate.findOverlaps(from, to, result);
     }
 
-    // BH adds dual-direction check
-
-    for (int i = candidateIndex; --i >= 0;)
-    {
-      NCNode<T> candidate = subranges.get(i);
-      if (candidate.getEnd() < from)
-      {
-        break;
-      }
-      candidate.findOverlaps(from, to, result);
-    }
-    return result;
-  }
-
-  private int findAnyOverlap(List<NCNode<T>> ranges, long from, long to)
-  {
-    int start = 0;
-    int end = ranges.size() - 1;
-    while (start <= end)
-    {
-      int mid = (start + end) >>> 1;
-      NCNode<T> r = ranges.get(mid);
-      if (r.getEnd() >= from)
-      {
-        if (r.getBegin() <= to)
-          return mid;
-        end = mid - 1;
-      }
-      else
-      {
-        start = mid + 1;
-      }
-    }
-    return -1;
   }
 
   /**
@@ -562,8 +489,8 @@ public class NCList<T extends IntervalI> extends AbstractCollection<T>
    */
   protected int findFirstOverlap(final long from)
   {
-    return BinarySearcher.findFirst(subranges, (int) from,
-            BinarySearcher.fend);
+    return BinarySearcher.findFirst(subranges,
+            val -> val.getEnd() >= from);
   }
 
   /**
@@ -590,7 +517,7 @@ public class NCList<T extends IntervalI> extends AbstractCollection<T>
     int offset = 0;
     int indent = 2;
     prettyPrint(sb, offset, indent);
-    sb.append('\n');// System.lineSeparator());
+    sb.append(System.lineSeparator());
     return sb.toString();
   }
 
@@ -606,7 +533,7 @@ public class NCList<T extends IntervalI> extends AbstractCollection<T>
     {
       if (!first)
       {
-        sb.append('\n');// System.lineSeparator());
+        sb.append(System.lineSeparator());
       }
       first = false;
       subrange.prettyPrint(sb, offset, indent);
@@ -821,10 +748,5 @@ public class NCList<T extends IntervalI> extends AbstractCollection<T>
   {
     subranges.clear();
     size = 0;
-  }
-
-  public int getWidth()
-  {
-    return subranges.size();
   }
 }

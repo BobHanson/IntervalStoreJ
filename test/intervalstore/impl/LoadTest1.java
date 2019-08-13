@@ -29,7 +29,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package intervalstore.nonc;
+package intervalstore.impl;
 
 import static org.testng.Assert.assertTrue;
 
@@ -46,7 +46,6 @@ import java.util.zip.ZipInputStream;
 
 import org.testng.annotations.Test;
 
-import intervalstore.impl.SimpleFeature;
 import junit.extensions.PA;
 
 /**
@@ -55,7 +54,7 @@ import junit.extensions.PA;
  * @author gmcarstairs
  *
  */
-public class NoNCListLoadTest
+public class LoadTest1
 {
   /*
    * Ensembl and gnomAD variants on human BRAF gene 
@@ -194,7 +193,7 @@ public class NoNCListLoadTest
       System.out.println(String.format(
               "Found %d variants including %d SNVs and %d colocated",
               intervals.size(), snvCount, colocatedCount));
-      // IntervalStore<SimpleFeature> ncl = buildIntervalStore(
+      // IntervalStore2<SimpleFeature> ncl = buildIntervalStore(
       // intervals,
       // "Variants");
       // System.out.println(ncl.prettyPrint());

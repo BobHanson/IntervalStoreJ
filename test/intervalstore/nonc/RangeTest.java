@@ -41,7 +41,7 @@ import org.testng.annotations.Test;
 import intervalstore.api.IntervalI;
 import intervalstore.impl.Range;
 
-public class NoNCListBuilderTest
+public class RangeTest
 {
 
   @Test(groups = "Functional")

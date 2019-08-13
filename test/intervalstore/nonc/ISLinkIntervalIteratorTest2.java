@@ -43,12 +43,12 @@ import org.testng.annotations.Test;
 
 import intervalstore.impl.Range;
 
-public class NoNCListIntervalIteratorTest
+public class ISLinkIntervalIteratorTest2
 {
   @Test(groups = "Functional")
   public void testNext()
   {
-    IntervalStore<Range> store = new IntervalStore<>();
+    IntervalStore2<Range> store = new IntervalStore2<>();
 
     Iterator<Range> it = store.iterator();
     assertFalse(it.hasNext());

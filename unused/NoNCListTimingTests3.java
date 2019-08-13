@@ -47,7 +47,7 @@ import intervalstore.impl.Range;
 
 /**
  * A class with methods to inspect the performance and scalability of loading
- * and querying IntervalStore with no NCList, and also a 'naive' (unordered)
+ * and querying IntervalStore3 with no NCList, and also a 'naive' (unordered)
  * list for comparison
  * <ul>
  * <li>Enable this test by setting @Test(enabled = true)</li>
@@ -63,11 +63,11 @@ import intervalstore.impl.Range;
  */
 
 @Test(enabled = true)
-public class NoNCListTimingTests
+public class NoNCListTimingTests3
 {
 
   /**
-   * flag for only doing IntervalStore tests
+   * flag for only doing IntervalStore3 tests
    */
   private static final boolean INTERVAL_ONLY = true;
 
@@ -408,7 +408,7 @@ public class NoNCListTimingTests
 
   /**
    * Performs a number of repeats of a timing test which adds a number of
-   * intervals one at a time to an IntervalStore, optionally testing first for
+   * intervals one at a time to an IntervalStore3, optionally testing first for
    * duplicate (i.e. whether the list already contains the interval)
    * 
    * @param count
@@ -423,7 +423,7 @@ public class NoNCListTimingTests
 
     for (int i = 0; i < REPEATS + WARMUPS; i++)
     {
-      IntervalStore<Range> ncl = new IntervalStore<>(
+      IntervalStore3<Range> ncl = new IntervalStore3<>(
               (mode & DO_PRESORT) == DO_PRESORT);
       List<Range> ranges = generateIntervals(count);
       long now = System.nanoTime();
@@ -450,7 +450,7 @@ public class NoNCListTimingTests
   }
 
   /**
-   * Timing tests of loading an IntervalStore, with all intervals loaded in the
+   * Timing tests of loading an IntervalStore3, with all intervals loaded in the
    * constructor
    */
   public synchronized void testLoadTime_intervalstore_bulkLoad()
@@ -465,20 +465,20 @@ public class NoNCListTimingTests
       {
         List<Range> ranges = generateIntervals(count);
         long now = System.nanoTime();
-        new IntervalStore<>(ranges, true);
+        new IntervalStore3<>(ranges, true);
         long elapsed = System.nanoTime() - now;
         if (i >= WARMUPS)
         {
           data[i - WARMUPS] = elapsed;
         }
       }
-      if (!logResults("IntervalStore bulk presort", count, data))
+      if (!logResults("IntervalStore3 bulk presort", count, data))
         break;
     }
   }
 
   /**
-   * Timing tests of loading an IntervalStore, with all intervals loaded in the
+   * Timing tests of loading an IntervalStore3, with all intervals loaded in the
    * constructor
    */
   public synchronized void testLoadTime_intervalstore_bulkLoad_nopresort()
@@ -493,21 +493,21 @@ public class NoNCListTimingTests
       {
         List<Range> ranges = generateIntervals(count);
         long now = System.nanoTime();
-        new IntervalStore<>(ranges, false);
+        new IntervalStore3<>(ranges, false);
         long elapsed = System.nanoTime() - now;
         if (i >= WARMUPS)
         {
           data[i - WARMUPS] = elapsed;
         }
       }
-      if (!logResults("IntervalStore bulk nopresort", count, data))
+      if (!logResults("IntervalStore3 bulk nopresort", count, data))
         break;
     }
   }
 
 
   /**
-   * Timing tests of loading an IntervalStore, with intervals loaded one at a
+   * Timing tests of loading an IntervalStore3, with intervals loaded one at a
    * time
    */
   public synchronized void testLoadTime_intervalstore_incremental_nodupl_nopresort()
@@ -518,13 +518,13 @@ public class NoNCListTimingTests
     {
       int count = (int) Math.pow(10, j / LOG_F);
       if (!loadIntervalStore(count, NO_DUPLICATES | NO_PRESORT,
-              "IntervalStore incr nodupl nosort"))
+              "IntervalStore3 incr nodupl nosort"))
         break;
     }
   }
 
   /**
-   * Timing tests of loading an IntervalStore, with intervals loaded one at a
+   * Timing tests of loading an IntervalStore3, with intervals loaded one at a
    * time
    */
   public synchronized void testLoadTime_intervalstore_incremental_nodupl_presort()
@@ -535,13 +535,13 @@ public class NoNCListTimingTests
     {
       int count = (int) Math.pow(10, j / LOG_F);
       if (!loadIntervalStore(count, NO_DUPLICATES | DO_PRESORT,
-              "IntervalStore incr nodupl presort"))
+              "IntervalStore3 incr nodupl presort"))
         break;
     }
   }
 
   /**
-   * Timing tests of loading an IntervalStore, with intervals loaded one at a
+   * Timing tests of loading an IntervalStore3, with intervals loaded one at a
    * time, and a check for duplicates before adding each interval
    */
   public synchronized void testLoadTime_intervalstore_incr_dupl_presort()
@@ -552,13 +552,13 @@ public class NoNCListTimingTests
     {
       int count = (int) Math.pow(10, j / LOG_F);
       if (!loadIntervalStore(count, ALLOW_DUPLICATES | DO_PRESORT,
-              "IntervalStore dupl presort"))
+              "IntervalStore3 dupl presort"))
         break;
     }
   }
 
   /**
-   * Timing tests of loading an IntervalStore, with intervals loaded one at a
+   * Timing tests of loading an IntervalStore3, with intervals loaded one at a
    * time, and a check for duplicates before adding each interval
    */
   public synchronized void testLoadTime_intervalstore_incr_dupl_nopresort()
@@ -569,13 +569,13 @@ public class NoNCListTimingTests
     {
       int count = (int) Math.pow(10, j / LOG_F);
       if (!loadIntervalStore(count, ALLOW_DUPLICATES | NO_PRESORT,
-              "IntervalStore dupl nopresort"))
+              "IntervalStore3 dupl nopresort"))
         break;
     }
   }
 
   /**
-   * Timing tests of querying an IntervalStore for overlaps
+   * Timing tests of querying an IntervalStore3 for overlaps
    */
   public synchronized void testQueryTime_intervalstore()
   {
@@ -589,7 +589,7 @@ public class NoNCListTimingTests
       {
         List<Range> ranges = generateIntervals(count,
                 QUERY_STORE_INTERVAL_SIZE);
-        IntervalStore<Range> ncl = new IntervalStore<>(ranges);
+          IntervalStore3<Range> ncl = new IntervalStore3<>(ranges);
         ncl.isValid();
         if (j == LOG_0 && i == 0)
           System.out.println("Query interval " + QUERY_STORE_INTERVAL_SIZE
@@ -609,7 +609,7 @@ public class NoNCListTimingTests
         }
         assertTrue(ncl.isValid());
       }
-      if (!logResults("IntervalStore query", count, data))
+        if (!logResults("IntervalStore3 query", count, data))
         break;
     }
 
@@ -623,11 +623,11 @@ public class NoNCListTimingTests
 
     }
     System.out.println(
-            "query " + IntervalStore.ntest + " " + IntervalStore.ntest1);
+            "query2 " + IntervalStore3.ntest + " " + IntervalStore3.ntest1);
   }
 
   /**
-   * Timing tests for deleting from an IntervalStore
+   * Timing tests for deleting from an IntervalStore3
    */
   public synchronized void testRemoveTime_intervalstore()
   {
@@ -646,7 +646,7 @@ public class NoNCListTimingTests
         List<Range> ranges = generateIntervals(count);
         Range[] list = ranges.toArray(new Range[count]);
 
-        IntervalStore<Range> ncl = new IntervalStore<>(ranges);
+        IntervalStore3<Range> ncl = new IntervalStore3<>(ranges);
   
         /*
          * remove intervals picked pseudo-randomly; attempts to remove the
@@ -664,7 +664,7 @@ public class NoNCListTimingTests
         }
         assertTrue(ncl.isValid());
       }
-      if (!logResults("IntervalStore remove", count, data))
+      if (!logResults("IntervalStore3 remove", count, data))
         break;
     }
   }

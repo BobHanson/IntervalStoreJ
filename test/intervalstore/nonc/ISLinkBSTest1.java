@@ -42,7 +42,7 @@ import org.testng.annotations.Test;
 
 import intervalstore.impl.Range;
 
-public class NoNCListBSTest
+public class ISLinkBSTest1
 {
   @Test(enabled = true) // groups = "functional")
   public void test1()
@@ -51,6 +51,9 @@ public class NoNCListBSTest
      * no-arg constructor is not terribly interesting
      */
 
+    Range r0a = new Range(3, 3);
+    Range r0b = new Range(4, 4);
+    Range r0c = new Range(5, 7);
     Range r1 = new Range(10, 80);
     Range r1a = new Range(10, 100);
     Range r1b = new Range(10, 100);
@@ -65,16 +68,30 @@ public class NoNCListBSTest
     Range r6 = new Range(70, 120);
     Range r7 = new Range(78, 78);
     // add to a list in unsorted order so constructor has to sort
-    List<Range> ranges = Arrays.asList(r1, r1a, r1b, r2, r3, r4, r4a, r4b,
+    List<Range> ranges = Arrays.asList(r0a, r0b, r0c, r1, r1a, r1b, r2, r3,
+            r4,
+            r4a, r4b,
             r5, r5b, r6, r7);
     IntervalStore<Range> store = new IntervalStore<>(ranges);
     System.out.println(store);
 
-    checkInterval(store, -114, -41, new Range[] {});
+    
+    checkInterval(store, 57, 128,
+            new Range[]
+            { r1, r1a, r1b, r4, r5, r6, r7 });
 
     checkInterval(store, 14, 41, new Range[] { r1, r1a, r1b, r2, r3 });
-    checkInterval(store, 37, 37, new Range[] { r1, r1a, r1b, r3 });
+
+    checkInterval(store, 4, 5, new Range[] { r0b, r0c });
+
     checkInterval(store, 86, 113, new Range[] { r1a, r1b, r6 });
+
+
+
+    checkInterval(store, 37, 37, new Range[] { r1, r1a, r1b, r3 });
+
+    checkInterval(store, -114, -41, new Range[] {});
+
 
     checkInterval(store, 71, 113, new Range[] { r1, r1a, r1b, r4, r6, r7 });
 

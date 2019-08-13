@@ -157,8 +157,5 @@ public interface IntervalI
             forwardStrand ? FORWARD_STRAND : REVERSE_STRAND);
   }
 
-  int getContainedBy();
-
-  void setContainedBy(int containedBy);
 
 }
