@@ -113,6 +113,8 @@ public class ISLinkTimingTests
 
   private static final boolean TEST_STORE2 = true;
 
+  private static final boolean QUERY_SHOW_RESULT_COUNT = false;
+
   /**
    * maximum number of seconds per log cycle to wait before bailing out
    */
@@ -734,7 +736,8 @@ public class ISLinkTimingTests
         }
       }
       ok = logResults(testName, count, data);
-      System.out.println("# results " + ntotal);
+      if (QUERY_SHOW_RESULT_COUNT)
+        System.out.println("# results " + ntotal);
     }
 
     switch (mode)
