@@ -31,8 +31,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package intervalstore.nonc;
 
+import static org.testng.Assert.assertEquals;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
@@ -40,6 +44,7 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import intervalstore.api.IntervalI;
 import intervalstore.impl.NCList;
 import intervalstore.impl.Range;
 
@@ -105,7 +110,9 @@ public class ISLinkTimingTests
    * flag to allow testing of alternate versions of impl.IntervalStore
    */
 
-  private static final boolean TEST_STORE0 = false;
+  private static final boolean TEST_STORE0 = true;
+
+  private static final boolean TEST_NCLIST0 = true;
 
   /**
    * flag to allow testing of alternate versions of nonc.IntervalStore
@@ -113,7 +120,10 @@ public class ISLinkTimingTests
 
   private static final boolean TEST_STORE2 = true;
 
-  private static final boolean QUERY_SHOW_RESULT_COUNT = false;
+  // /**
+  // * add # result line to check that all queries are returning the same set.
+  // */
+  // private static final boolean QUERY_SHOW_RESULT_COUNT = true;
 
   /**
    * maximum number of seconds per log cycle to wait before bailing out
@@ -124,20 +134,28 @@ public class ISLinkTimingTests
    * factor to multiply first parameter of generateIntervals(sequenceWidth,
    * count, length) by to set store sequence width; higher number reduces number
    * of overlaps
+   * 
+   * set to 10 generally; 4 for comparison with earlier versions of tests
+   * 
    */
-  private static final int QUERY_STORE_SEQUENCE_SIZE_FACTOR = 10;// 10;
+  private static final int QUERY_STORE_SEQUENCE_SIZE_FACTOR = 4;// 10;
 
   /**
    * interval size for the store; absolute(negative) or maximum(positive);
+   * 
+   * 50 generally; -1 for SNPs
+   * 
    */
-  private static final int QUERY_STORE_INTERVAL_SIZE = 50;// -1 for SNPs;
+  private static final int QUERY_STORE_INTERVAL_SIZE = 50;
 
   /**
    * width of query intervals; negative for absolute, positive for max value
    * 
+   * -1 overview single-pixel; -1000 standard view
+   * 
+   * 
    */
-  // private static final int QUERY_WINDOW = -1;// overview single-pixel overlap
-  private static final int QUERY_WINDOW = -1000;// -1000 standard view
+  private static final int QUERY_WINDOW = -1000;
 
   /**
    * number of queries to generate (independently of the size of the sequence
@@ -150,6 +168,27 @@ public class ISLinkTimingTests
    */
 
   private static final int DELETE_COUNT = 1000;
+
+  /**
+   * initial value for loop [LOG_0, MAX_LOG] inclusive
+   * 
+   * 10 starts at 2K; 18 starts at 1M
+   */
+  private static final int LOG_0 = 18;
+
+  /**
+   * final value for loop [LOG_0, MAX_LOG] inclusive
+   * 
+   * 18 ends at 1M
+   */
+  private static final int MAX_LOGN = 18;
+
+  /**
+   * factor in Math.pow(10, j / LOG_F)
+   * 
+   * 3.0 is a factor of 10^(1/3) increase (2.15, roughly doubling) for each loop
+   */
+  private static final double LOG_F = 3.0;
 
   /**
    * a fixed random seed for repeatable tests
@@ -172,21 +211,6 @@ public class ISLinkTimingTests
    */
   static final boolean LOG_RAW_DATA = false;
 
-  /**
-   * initial value for loop [LOG_0, MAX_LOG] inclusive
-   */
-  private static final int LOG_0 = 10;
-
-  /**
-   * final value for loop [LOG_0, MAX_LOG] inclusive
-   */
-  private static final int MAX_LOGN = 17;
-
-  /**
-   * factor in Math.pow(10, j / LOG_F)
-   */
-  private static final double LOG_F = 3.0;
-
   private static final String MODE_INTERVAL_STORE_NCLIST = "IntStoreNCList";
 
   private static final String MODE_INTERVAL_STORE_NCLIST0 = "IntStoreNCList0";
@@ -196,6 +220,8 @@ public class ISLinkTimingTests
   private static final String MODE_INTERVAL_STORE_LINK2 = "IntStoreLink2";
 
   private static final String MODE_NCLIST = "NCList";
+
+  private static final String MODE_NCLIST0 = "NCList0";
 
   private static final String MODE_NAIVE = "Naive";
 
@@ -244,7 +270,10 @@ public class ISLinkTimingTests
             .println("Java version: " + System.getProperty("java.version"));
     System.out.println(System.getProperty("os.arch") + " "
             + System.getProperty("os.name") + " "
-            + System.getProperty("os.version") + "\n");
+            + System.getProperty("os.version") + " cores:"
+            + Runtime.getRuntime().availableProcessors());
+    System.out.println(
+            new Date(System.currentTimeMillis()).toGMTString() + "\n");
     System.out.println(
             "Test             \tsize N \ttests\ttime/ms\trate/(N/ms)\ttime stderr\trate stderr");
   }
@@ -376,6 +405,8 @@ public class ISLinkTimingTests
       return;
 
     testBulkLoad(MODE_NCLIST);
+    if (TEST_NCLIST0)
+      testBulkLoad(MODE_NCLIST0);
 
     if (!INCLUDE_NAIVE)
       return;
@@ -400,6 +431,8 @@ public class ISLinkTimingTests
       return;
 
     testIncrLoad(MODE_NCLIST, false);
+    if (TEST_NCLIST0)
+      testIncrLoad(MODE_NCLIST0, false);
 
     if (!INCLUDE_NAIVE)
       return;
@@ -424,6 +457,8 @@ public class ISLinkTimingTests
       return;
 
     testIncrLoad(MODE_NCLIST, true);
+    if (TEST_NCLIST0)
+      testIncrLoad(MODE_NCLIST0, true);
 
     if (!INCLUDE_NAIVE)
       return;
@@ -431,24 +466,31 @@ public class ISLinkTimingTests
     testIncrLoad(MODE_NAIVE, true);
   }
 
+  private int[] hashcodes = new int[MAX_LOGN + 1];
+
+  private int[] resultcounts = new int[MAX_LOGN + 1];
+
   public void testQueryTime()
   {
     testQuery(MODE_INTERVAL_STORE_NCLIST);
     if (TEST_STORE0)
       testQuery(MODE_INTERVAL_STORE_NCLIST0);
+
     testQuery(MODE_INTERVAL_STORE_LINK);
     if (TEST_STORE2)
       testQuery(MODE_INTERVAL_STORE_LINK2);
 
-    if (INTERVAL_STORE_ONLY)
-      return;
+    if (!INTERVAL_STORE_ONLY)
+    {
 
     testQuery(MODE_NCLIST);
+    if (TEST_NCLIST0)
+      testQuery(MODE_NCLIST0);
 
-    if (!INCLUDE_NAIVE)
-      return;
-
+      if (INCLUDE_NAIVE)
     testQuery(MODE_NAIVE);
+    }
+    System.out.println("# resultcounts " + Arrays.toString(resultcounts));
   }
 
   public void testRemoveTime()
@@ -468,6 +510,8 @@ public class ISLinkTimingTests
       return;
 
     testRemove(MODE_NCLIST);
+    if (TEST_NCLIST0)
+      testRemove(MODE_NCLIST0);
 
     if (!INCLUDE_NAIVE)
       return;
@@ -506,10 +550,13 @@ public class ISLinkTimingTests
           new intervalstore.nonc.IntervalStore2<>(ranges);
           break;
         case MODE_INTERVAL_STORE_LINK:
-          new intervalstore.nonc.IntervalStore<>(ranges);
+          new intervalstore.nonc.IntervalStore0<>(ranges);
           break;
         case MODE_NCLIST:
           new NCList<>(ranges);
+          break;
+        case MODE_NCLIST0:
+          new intervalstore.impl0.NCList<>(ranges);
           break;
         case MODE_NAIVE:
           List<Range> simple = new ArrayList<>();
@@ -586,7 +633,7 @@ public class ISLinkTimingTests
           }
           break;
         case MODE_INTERVAL_STORE_LINK:
-          intervalstore.nonc.IntervalStore<Range> store3 = new intervalstore.nonc.IntervalStore<>();
+          intervalstore.nonc.IntervalStore0<Range> store3 = new intervalstore.nonc.IntervalStore0<>();
           for (int ir = 0; ir < count; ir++)
           {
             Range r = ranges.get(ir);
@@ -607,6 +654,17 @@ public class ISLinkTimingTests
             }
           }
           break;
+        case MODE_NCLIST0:
+          intervalstore.impl0.NCList<Range> nclist0 = new intervalstore.impl0.NCList<>(
+                  ranges);
+          for (int ir = 0; ir < count; ir++)
+          {
+            Range r = ranges.get(ir);
+            if (allowDuplicates || !nclist0.contains(r))
+            {
+              nclist0.add(r);
+            }
+          }
         case MODE_NAIVE:
           List<Range> simple = new ArrayList<>();
           for (int ir = 0; ir < count; ir++)
@@ -635,11 +693,11 @@ public class ISLinkTimingTests
 
   private void testQuery(String mode)
   {
-    rand = new Random(RANDOM_SEED);
     intervalstore.impl0.IntervalStore<Range> store0 = null;
     intervalstore.impl.IntervalStore<Range> store1 = null;
     intervalstore.nonc.IntervalStore2<Range> store2 = null;
-    intervalstore.nonc.IntervalStore<Range> store3 = null;
+    intervalstore.nonc.IntervalStore0<Range> store3 = null;
+    intervalstore.impl0.NCList<Range> nclist0 = null;
     NCList<Range> nclist = null;
     List<Range> simple = null;
 
@@ -648,6 +706,7 @@ public class ISLinkTimingTests
             + QUERY_STORE_SEQUENCE_SIZE_FACTOR + " query width "
             + QUERY_WINDOW + " query count " + QUERY_COUNT);
 
+    rand = new Random(RANDOM_SEED);
     String testName = mode + " query";
     boolean ok = true;
     for (int j = LOG_0; j <= MAX_LOGN; j++)
@@ -660,8 +719,7 @@ public class ISLinkTimingTests
       }
 
       double[] data = new double[REPEATS];
-      int ntotal = 0;
-
+      List<Range> result = null;
       int sequenceWidth = count * QUERY_STORE_SEQUENCE_SIZE_FACTOR;
       for (int i = 0; i < REPEATS + WARMUPS; i++)
       {
@@ -681,10 +739,13 @@ public class ISLinkTimingTests
           store2 = new intervalstore.nonc.IntervalStore2<>(ranges);
           break;
         case MODE_INTERVAL_STORE_LINK:
-          store3 = new intervalstore.nonc.IntervalStore<>(ranges);
+          store3 = new intervalstore.nonc.IntervalStore0<>(ranges);
           break;
         case MODE_NCLIST:
           nclist = new NCList<>(ranges);
+          break;
+        case MODE_NCLIST0:
+          nclist0 = new intervalstore.impl0.NCList<>(ranges);
           break;
         case MODE_NAIVE:
           simple = new ArrayList<>();
@@ -692,6 +753,7 @@ public class ISLinkTimingTests
           simple.sort(naiveComp);
           break;
         }
+
         long now = System.nanoTime();
 
         for (int iq = 0; iq < QUERY_COUNT; iq++)
@@ -700,22 +762,25 @@ public class ISLinkTimingTests
           switch (mode)
           {
           case MODE_INTERVAL_STORE_NCLIST0:
-            ntotal += store0.findOverlaps(q.getBegin(), q.getEnd()).size();
+            result = store0.findOverlaps(q.getBegin(), q.getEnd());
             break;
           case MODE_INTERVAL_STORE_NCLIST:
-            ntotal += store1.findOverlaps(q.getBegin(), q.getEnd()).size();
+            result = store1.findOverlaps(q.getBegin(), q.getEnd());
             break;
           case MODE_INTERVAL_STORE_LINK2:
-            ntotal += store2.findOverlaps(q.getBegin(), q.getEnd()).size();
+            result = store2.findOverlaps(q.getBegin(), q.getEnd());
             break;
           case MODE_INTERVAL_STORE_LINK:
-            ntotal += store3.findOverlaps(q.getBegin(), q.getEnd()).size();
+            result = store3.findOverlaps(q.getBegin(), q.getEnd());
             break;
           case MODE_NCLIST:
-            ntotal += nclist.findOverlaps(q.getBegin(), q.getEnd()).size();
+            result = nclist.findOverlaps(q.getBegin(), q.getEnd());
+            break;
+          case MODE_NCLIST0:
+            result = nclist0.findOverlaps(q.getBegin(), q.getEnd());
             break;
           case MODE_NAIVE:
-            List<Range> result = new ArrayList<>();
+            result = new ArrayList<>();
             for (int ir = ranges.size(); --ir >= 0;)
             {
               Range r = ranges.get(ir);
@@ -724,7 +789,6 @@ public class ISLinkTimingTests
                 result.add(r);
               }
             }
-            ntotal += result.size();
             break;
           }
 
@@ -736,8 +800,25 @@ public class ISLinkTimingTests
         }
       }
       ok = logResults(testName, count, data);
-      if (QUERY_SHOW_RESULT_COUNT)
-        System.out.println("# results " + ntotal);
+      // if (QUERY_SHOW_RESULT_COUNT)
+      {
+        // just check the very last result, to save time
+        int ntotal = result.size();
+        result.sort(IntervalI.COMPARATOR_BIGENDIAN);
+        int hashcode = result.hashCode();
+        if (hashcodes[j] == 0)
+        {
+          resultcounts[j] = ntotal;
+          hashcodes[j] = hashcode;
+        }
+        else
+        {
+          assertEquals(ntotal, resultcounts[j]);
+          assertEquals(hashcode, hashcodes[j]);
+        }
+        // System.out.println("# results " + ntotal + " 0x"
+        // + Integer.toHexString(hashcode));
+      }
     }
 
     switch (mode)
@@ -764,6 +845,10 @@ public class ISLinkTimingTests
       System.out.println("# dimensions [" + nclist.getDepth() + " "
               + nclist.getWidth() + "]");
       break;
+    case MODE_NCLIST0:
+      System.out.println(
+              "# dimensions [" + nclist0.getDepth() + " " + "?" + "]");
+      break;
     case MODE_NAIVE:
       System.out.println("# dimensions [1 " + simple.size() + "]");
       break;
@@ -777,13 +862,14 @@ public class ISLinkTimingTests
     intervalstore.impl0.IntervalStore<Range> store0 = null;
     intervalstore.impl.IntervalStore<Range> store1 = null;
     intervalstore.nonc.IntervalStore2<Range> store2 = null;
-    intervalstore.nonc.IntervalStore<Range> store3 = null;
-
+    intervalstore.nonc.IntervalStore0<Range> store3 = null;
+    intervalstore.impl0.NCList<Range> nclist0 = null;
     NCList<Range> nclist = null;
     List<Range> simple = null;
 
     rand = new Random(RANDOM_SEED);
     Random rand2 = new Random(RANDOM_SEED);
+
     String testName = mode + " remove";
     boolean ok = true;
     for (int j = LOG_0; j <= MAX_LOGN; j++)
@@ -815,10 +901,13 @@ public class ISLinkTimingTests
           store2 = new intervalstore.nonc.IntervalStore2<>(ranges);
           break;
         case MODE_INTERVAL_STORE_LINK:
-          store3 = new intervalstore.nonc.IntervalStore<>(ranges);
+          store3 = new intervalstore.nonc.IntervalStore0<>(ranges);
           break;
         case MODE_NCLIST:
           nclist = new NCList<>(ranges);
+          break;
+        case MODE_NCLIST0:
+          nclist0 = new intervalstore.impl0.NCList<>(ranges);
           break;
         case MODE_NAIVE:
           simple = new ArrayList<>();
@@ -847,6 +936,9 @@ public class ISLinkTimingTests
             break;
           case MODE_NCLIST:
             nclist.remove(r);
+            break;
+          case MODE_NCLIST0:
+            nclist0.remove(r);
             break;
           case MODE_NAIVE:
             ranges.remove(r);

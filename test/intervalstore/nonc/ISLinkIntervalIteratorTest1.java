@@ -48,7 +48,7 @@ public class ISLinkIntervalIteratorTest1
   @Test(groups = "Functional")
   public void testNext()
   {
-    IntervalStore<Range> store = new IntervalStore<>();
+    IntervalStore0<Range> store = new IntervalStore0<>();
 
     Iterator<Range> it = store.iterator();
     assertFalse(it.hasNext());

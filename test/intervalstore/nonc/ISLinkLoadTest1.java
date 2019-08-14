@@ -83,7 +83,7 @@ public class ISLinkLoadTest1
 
     {
       String lastChr = null;
-      IntervalStore<SimpleFeature> fs = new IntervalStore<>();
+      IntervalStore0<SimpleFeature> fs = new IntervalStore0<>();
       String line = br.readLine();
 
       while (line != null)
@@ -121,7 +121,7 @@ public class ISLinkLoadTest1
 
             lastChr = chr;
 
-            fs = new IntervalStore<>();
+            fs = new IntervalStore0<>();
           }
           String description = chr + ":" + desc;
           SimpleFeature sf = new SimpleFeature(from, to, description);
@@ -210,10 +210,10 @@ public class ISLinkLoadTest1
    * @param intervals
    * @param title
    */
-  protected IntervalStore<SimpleFeature> buildIntervalStore(
+  protected IntervalStore0<SimpleFeature> buildIntervalStore(
           List<SimpleFeature> intervals, String title)
   {
-    IntervalStore<SimpleFeature> store = new IntervalStore<>(
+    IntervalStore0<SimpleFeature> store = new IntervalStore0<>(
             intervals);
     assertTrue(store.isValid());
     @SuppressWarnings("unchecked")

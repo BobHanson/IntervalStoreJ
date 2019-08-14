@@ -72,7 +72,7 @@ public class ISLinkBSTest1
             r4,
             r4a, r4b,
             r5, r5b, r6, r7);
-    IntervalStore<Range> store = new IntervalStore<>(ranges);
+    IntervalStore0<Range> store = new IntervalStore0<>(ranges);
     System.out.println(store);
 
     
@@ -126,7 +126,7 @@ public class ISLinkBSTest1
 
   }
 
-  private void checkInterval(IntervalStore<Range> store, int from, int to,
+  private void checkInterval(IntervalStore0<Range> store, int from, int to,
           Range[] target)
   {
     System.out.println("checking interval " + from + "-" + to);
