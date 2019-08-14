@@ -65,6 +65,18 @@ public class IntervalStore<T extends IntervalI>
         extends AbstractCollection<T> implements IntervalStoreI<T>
 {
 
+  /**
+   * Search for the last interval that starts before or at the specified from/to
+   * range and the first interval that starts after it. In the situation that
+   * there are multiple intervals starting at from, this method returns the
+   * first of those.
+   * 
+   * @param a
+   * @param from
+   * @param to
+   * @param ret
+   * @return
+   */
   public static int binaryLastIntervalSearch(IntervalI[] a, long from,
           long to, int[] ret)
   {
@@ -435,7 +447,6 @@ public class IntervalStore<T extends IntervalI>
 
     if (from > maxEnd || to < minStart)
       return result;
-
     int index = binaryLastIntervalSearch(ordered, from, to, ret);
     int index1 = ret[0];
     if (index1 < 0)

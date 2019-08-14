@@ -67,6 +67,8 @@ import intervalstore.impl.Range;
  * 
  * (6) uses nanoTime, not currentTimeMillis
  * 
+ * (7) adds System.gc()
+ * 
  * 
  * A class with methods to inspect the performance and scalability of loading
  * and querying IntervalStore and NCList, and also a 'naive' (unordered) list
@@ -108,9 +110,11 @@ public class ISLinkTimingTests
   /**
    * flag to allow testing of alternate versions of impl.IntervalStore
    */
-
   private static final boolean TEST_STORE0 = true;
 
+  /**
+   * flag to allow testing of alternate versions of impl.NCList
+   */
   private static final boolean TEST_NCLIST0 = true;
 
   /**
@@ -118,6 +122,11 @@ public class ISLinkTimingTests
    */
 
   private static final boolean TEST_LINK0 = true;
+
+  /**
+   * flag to reuse result as parameter in nonc.IntervalStore only
+   */
+  private static final boolean USE_RESULT_PARAM = false;
 
   // /**
   // * add # result line to check that all queries are returning the same set.
@@ -137,7 +146,7 @@ public class ISLinkTimingTests
    * set to 10 generally; 4 for comparison with earlier versions of tests
    * 
    */
-  private static final int QUERY_STORE_SEQUENCE_SIZE_FACTOR = 4;// 10;
+  private static final int QUERY_STORE_SEQUENCE_SIZE_FACTOR = 10;
 
   /**
    * interval size for the store; absolute(negative) or maximum(positive);
@@ -173,7 +182,7 @@ public class ISLinkTimingTests
    * 
    * 10 starts at 2K; 18 starts at 1M
    */
-  private static final int LOG_0 = 18;
+  private static final int LOG_0 = 10;
 
   /**
    * final value for loop [LOG_0, MAX_LOG] inclusive
@@ -471,6 +480,7 @@ public class ISLinkTimingTests
 
   public void testQueryTime()
   {
+
     testQuery(MODE_INTERVAL_STORE_NCLIST);
     if (TEST_STORE0)
       testQuery(MODE_INTERVAL_STORE_NCLIST0);
@@ -536,6 +546,7 @@ public class ISLinkTimingTests
       for (int i = 0; i < REPEATS + WARMUPS; i++)
       {
         List<Range> ranges = generateIntervals(count);
+        System.gc();
         long now = System.nanoTime();
         switch (mode)
         {
@@ -594,6 +605,7 @@ public class ISLinkTimingTests
       for (int i = 0; i < REPEATS + WARMUPS; i++)
       {
         List<Range> ranges = generateIntervals(count);
+        System.gc();
         long now = System.nanoTime();
         switch (mode)
         {
@@ -718,7 +730,7 @@ public class ISLinkTimingTests
       }
 
       double[] data = new double[REPEATS];
-      List<Range> result = null;
+      List<Range> result = new ArrayList<>();
       int sequenceWidth = count * QUERY_STORE_SEQUENCE_SIZE_FACTOR;
       for (int i = 0; i < REPEATS + WARMUPS; i++)
       {
@@ -753,6 +765,8 @@ public class ISLinkTimingTests
           break;
         }
 
+        System.gc();
+
         long now = System.nanoTime();
 
         for (int iq = 0; iq < QUERY_COUNT; iq++)
@@ -767,7 +781,16 @@ public class ISLinkTimingTests
             result = store1.findOverlaps(q.getBegin(), q.getEnd());
             break;
           case MODE_INTERVAL_STORE_LINK:
-            result = store2.findOverlaps(q.getBegin(), q.getEnd());
+            if (USE_RESULT_PARAM)
+            {
+              result.clear();
+              result = store2.findOverlaps(q.getBegin(), q.getEnd(),
+                      result);
+            }
+            else
+            {
+              result = store2.findOverlaps(q.getBegin(), q.getEnd());
+            }
             break;
           case MODE_INTERVAL_STORE_LINK0:
             result = store3.findOverlaps(q.getBegin(), q.getEnd());
@@ -914,6 +937,7 @@ public class ISLinkTimingTests
           simple.sort(naiveComp);
           break;
         }
+        System.gc();
         long now = System.nanoTime();
         for (int id = 0; id < DELETE_COUNT; id++)
         {

@@ -42,7 +42,7 @@ import org.testng.annotations.Test;
 
 import intervalstore.impl.Range;
 
-public class ISLinkBSTest1
+public class ISLinkBSTest
 {
   @Test(enabled = true) // groups = "functional")
   public void test1()
@@ -51,9 +51,8 @@ public class ISLinkBSTest1
      * no-arg constructor is not terribly interesting
      */
 
-    Range r0a = new Range(3, 3);
-    Range r0b = new Range(4, 4);
-    Range r0c = new Range(5, 7);
+    Range r0a = new Range(5, 5);
+    Range r0b = new Range(6, 8);
     Range r1 = new Range(10, 80);
     Range r1a = new Range(10, 100);
     Range r1b = new Range(10, 100);
@@ -67,26 +66,53 @@ public class ISLinkBSTest1
     Range r5b = new Range(56, 56);
     Range r6 = new Range(70, 120);
     Range r7 = new Range(78, 78);
+
+    // edge case -- one SNP
+    checkInterval(new IntervalStore<>(Arrays.asList(r0a)), 5, 5,
+            new Range[]
+            { r0a });
+    checkInterval(new IntervalStore<>(Arrays.asList(r0a)), -1, 6,
+            new Range[]
+            { r0a });
+    checkInterval(new IntervalStore<>(Arrays.asList(r0a)), -1, 4,
+            new Range[] {});
+    checkInterval(new IntervalStore<>(Arrays.asList(r0a)), 6, 6,
+            new Range[] {});
+
+    // edge case -- one interval
+    checkInterval(new IntervalStore<>(Arrays.asList(r0b)), 6, 6,
+            new Range[]
+            { r0b });
+    checkInterval(new IntervalStore<>(Arrays.asList(r0b)), 8, 8,
+            new Range[]
+            { r0b });
+    checkInterval(new IntervalStore<>(Arrays.asList(r0b)), -1, 6,
+            new Range[]
+            { r0b });
+    checkInterval(new IntervalStore<>(Arrays.asList(r0b)), -1, 9,
+            new Range[]
+            { r0b });
+
     // add to a list in unsorted order so constructor has to sort
-    List<Range> ranges = Arrays.asList(r0a, r0b, r0c, r1, r1a, r1b, r2, r3,
-            r4,
+    List<Range> ranges = Arrays.asList(r0a, r0b, r1, r1a, r1b, r2, r3, r4,
             r4a, r4b,
             r5, r5b, r6, r7);
-    IntervalStore0<Range> store = new IntervalStore0<>(ranges);
+    IntervalStore<Range> store = new IntervalStore<>(ranges);
     System.out.println(store);
 
-    
+    checkInterval(store, 5, 5, new Range[] { r0a });
+
+    checkInterval(store, 6, 6, new Range[] { r0b });
+    checkInterval(store, 8, 8, new Range[] { r0b });
+    checkInterval(store, 86, 113, new Range[] { r1a, r1b, r6 });
+
     checkInterval(store, 57, 128,
             new Range[]
             { r1, r1a, r1b, r4, r5, r6, r7 });
 
-    checkInterval(store, 14, 41, new Range[] { r1, r1a, r1b, r2, r3 });
-
-    checkInterval(store, 4, 5, new Range[] { r0b, r0c });
-
     checkInterval(store, 86, 113, new Range[] { r1a, r1b, r6 });
 
-
+    checkInterval(store, 14, 41, new Range[] { r1, r1a, r1b, r2, r3 });
 
     checkInterval(store, 37, 37, new Range[] { r1, r1a, r1b, r3 });
 
@@ -126,7 +152,7 @@ public class ISLinkBSTest1
 
   }
 
-  private void checkInterval(IntervalStore0<Range> store, int from, int to,
+  private void checkInterval(IntervalStore<Range> store, int from, int to,
           Range[] target)
   {
     System.out.println("checking interval " + from + "-" + to);

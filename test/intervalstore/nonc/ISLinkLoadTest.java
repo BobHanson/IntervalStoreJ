@@ -55,7 +55,7 @@ import junit.extensions.PA;
  * @author gmcarstairs
  *
  */
-public class ISLinkLoadTest2
+public class ISLinkLoadTest
 {
   /*
    * Ensembl and gnomAD variants on human BRAF gene 
