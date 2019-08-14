@@ -105,7 +105,6 @@ public class ISLinkTimingTests
    */
   private static final boolean QUERY_ONLY = true;
 
-
   /**
    * flag to allow testing of alternate versions of impl.IntervalStore
    */
@@ -118,7 +117,7 @@ public class ISLinkTimingTests
    * flag to allow testing of alternate versions of nonc.IntervalStore
    */
 
-  private static final boolean TEST_STORE2 = true;
+  private static final boolean TEST_LINK0 = true;
 
   // /**
   // * add # result line to check that all queries are returning the same set.
@@ -217,7 +216,7 @@ public class ISLinkTimingTests
 
   private static final String MODE_INTERVAL_STORE_LINK = "IntStoreLink";
 
-  private static final String MODE_INTERVAL_STORE_LINK2 = "IntStoreLink2";
+  private static final String MODE_INTERVAL_STORE_LINK0 = "IntStoreLink0";
 
   private static final String MODE_NCLIST = "NCList";
 
@@ -398,8 +397,8 @@ public class ISLinkTimingTests
     if (TEST_STORE0)
       testBulkLoad(MODE_INTERVAL_STORE_NCLIST0);
     testBulkLoad(MODE_INTERVAL_STORE_LINK);
-    if (TEST_STORE2)
-      testBulkLoad(MODE_INTERVAL_STORE_LINK2);
+    if (TEST_LINK0)
+      testBulkLoad(MODE_INTERVAL_STORE_LINK0);
 
     if (INTERVAL_STORE_ONLY)
       return;
@@ -424,8 +423,8 @@ public class ISLinkTimingTests
     if (TEST_STORE0)
       testIncrLoad(MODE_INTERVAL_STORE_NCLIST0, false);
     testIncrLoad(MODE_INTERVAL_STORE_LINK, false);
-    if (TEST_STORE2)
-      testIncrLoad(MODE_INTERVAL_STORE_LINK2, false);
+    if (TEST_LINK0)
+      testIncrLoad(MODE_INTERVAL_STORE_LINK0, false);
 
     if (INTERVAL_STORE_ONLY)
       return;
@@ -450,8 +449,8 @@ public class ISLinkTimingTests
     if (TEST_STORE0)
       testIncrLoad(MODE_INTERVAL_STORE_NCLIST0, true);
     testIncrLoad(MODE_INTERVAL_STORE_LINK, true);
-    if (TEST_STORE2)
-      testIncrLoad(MODE_INTERVAL_STORE_LINK2, true);
+    if (TEST_LINK0)
+      testIncrLoad(MODE_INTERVAL_STORE_LINK0, true);
 
     if (INTERVAL_STORE_ONLY)
       return;
@@ -477,18 +476,18 @@ public class ISLinkTimingTests
       testQuery(MODE_INTERVAL_STORE_NCLIST0);
 
     testQuery(MODE_INTERVAL_STORE_LINK);
-    if (TEST_STORE2)
-      testQuery(MODE_INTERVAL_STORE_LINK2);
+    if (TEST_LINK0)
+      testQuery(MODE_INTERVAL_STORE_LINK0);
 
     if (!INTERVAL_STORE_ONLY)
     {
 
-    testQuery(MODE_NCLIST);
-    if (TEST_NCLIST0)
-      testQuery(MODE_NCLIST0);
+      testQuery(MODE_NCLIST);
+      if (TEST_NCLIST0)
+        testQuery(MODE_NCLIST0);
 
       if (INCLUDE_NAIVE)
-    testQuery(MODE_NAIVE);
+        testQuery(MODE_NAIVE);
     }
     System.out.println("# resultcounts " + Arrays.toString(resultcounts));
   }
@@ -503,8 +502,8 @@ public class ISLinkTimingTests
     if (TEST_STORE0)
       testRemove(MODE_INTERVAL_STORE_NCLIST0);
     testRemove(MODE_INTERVAL_STORE_LINK);
-    if (TEST_STORE2)
-      testRemove(MODE_INTERVAL_STORE_LINK2);
+    if (TEST_LINK0)
+      testRemove(MODE_INTERVAL_STORE_LINK0);
 
     if (INTERVAL_STORE_ONLY)
       return;
@@ -546,10 +545,10 @@ public class ISLinkTimingTests
         case MODE_INTERVAL_STORE_NCLIST0:
           new intervalstore.impl0.IntervalStore<>(ranges);
           break;
-        case MODE_INTERVAL_STORE_LINK2:
-          new intervalstore.nonc.IntervalStore2<>(ranges);
-          break;
         case MODE_INTERVAL_STORE_LINK:
+          new intervalstore.nonc.IntervalStore<>(ranges);
+          break;
+        case MODE_INTERVAL_STORE_LINK0:
           new intervalstore.nonc.IntervalStore0<>(ranges);
           break;
         case MODE_NCLIST:
@@ -621,8 +620,8 @@ public class ISLinkTimingTests
           }
           break;
 
-        case MODE_INTERVAL_STORE_LINK2:
-          intervalstore.nonc.IntervalStore2<Range> store2 = new intervalstore.nonc.IntervalStore2<>();
+        case MODE_INTERVAL_STORE_LINK:
+          intervalstore.nonc.IntervalStore<Range> store2 = new intervalstore.nonc.IntervalStore<>();
           for (int ir = 0; ir < count; ir++)
           {
             Range r = ranges.get(ir);
@@ -632,7 +631,7 @@ public class ISLinkTimingTests
             }
           }
           break;
-        case MODE_INTERVAL_STORE_LINK:
+        case MODE_INTERVAL_STORE_LINK0:
           intervalstore.nonc.IntervalStore0<Range> store3 = new intervalstore.nonc.IntervalStore0<>();
           for (int ir = 0; ir < count; ir++)
           {
@@ -695,7 +694,7 @@ public class ISLinkTimingTests
   {
     intervalstore.impl0.IntervalStore<Range> store0 = null;
     intervalstore.impl.IntervalStore<Range> store1 = null;
-    intervalstore.nonc.IntervalStore2<Range> store2 = null;
+    intervalstore.nonc.IntervalStore<Range> store2 = null;
     intervalstore.nonc.IntervalStore0<Range> store3 = null;
     intervalstore.impl0.NCList<Range> nclist0 = null;
     NCList<Range> nclist = null;
@@ -735,10 +734,10 @@ public class ISLinkTimingTests
         case MODE_INTERVAL_STORE_NCLIST:
           store1 = new intervalstore.impl.IntervalStore<>(ranges);
           break;
-        case MODE_INTERVAL_STORE_LINK2:
-          store2 = new intervalstore.nonc.IntervalStore2<>(ranges);
-          break;
         case MODE_INTERVAL_STORE_LINK:
+          store2 = new intervalstore.nonc.IntervalStore<>(ranges);
+          break;
+        case MODE_INTERVAL_STORE_LINK0:
           store3 = new intervalstore.nonc.IntervalStore0<>(ranges);
           break;
         case MODE_NCLIST:
@@ -767,10 +766,10 @@ public class ISLinkTimingTests
           case MODE_INTERVAL_STORE_NCLIST:
             result = store1.findOverlaps(q.getBegin(), q.getEnd());
             break;
-          case MODE_INTERVAL_STORE_LINK2:
+          case MODE_INTERVAL_STORE_LINK:
             result = store2.findOverlaps(q.getBegin(), q.getEnd());
             break;
-          case MODE_INTERVAL_STORE_LINK:
+          case MODE_INTERVAL_STORE_LINK0:
             result = store3.findOverlaps(q.getBegin(), q.getEnd());
             break;
           case MODE_NCLIST:
@@ -833,11 +832,11 @@ public class ISLinkTimingTests
               + store1.getWidth() + "]");
 
       break;
-    case MODE_INTERVAL_STORE_LINK2:
+    case MODE_INTERVAL_STORE_LINK:
       System.out.println("# dimensions [" + store2.getDepth() + " "
               + store2.getWidth() + "]");
       break;
-    case MODE_INTERVAL_STORE_LINK:
+    case MODE_INTERVAL_STORE_LINK0:
       System.out.println("# dimensions [" + store3.getDepth() + " "
               + store3.getWidth() + "]");
       break;
@@ -861,7 +860,7 @@ public class ISLinkTimingTests
     System.out.println("# remove " + mode);
     intervalstore.impl0.IntervalStore<Range> store0 = null;
     intervalstore.impl.IntervalStore<Range> store1 = null;
-    intervalstore.nonc.IntervalStore2<Range> store2 = null;
+    intervalstore.nonc.IntervalStore<Range> store2 = null;
     intervalstore.nonc.IntervalStore0<Range> store3 = null;
     intervalstore.impl0.NCList<Range> nclist0 = null;
     NCList<Range> nclist = null;
@@ -897,10 +896,10 @@ public class ISLinkTimingTests
         case MODE_INTERVAL_STORE_NCLIST0:
           store0 = new intervalstore.impl0.IntervalStore<>(ranges);
           break;
-        case MODE_INTERVAL_STORE_LINK2:
-          store2 = new intervalstore.nonc.IntervalStore2<>(ranges);
-          break;
         case MODE_INTERVAL_STORE_LINK:
+          store2 = new intervalstore.nonc.IntervalStore<>(ranges);
+          break;
+        case MODE_INTERVAL_STORE_LINK0:
           store3 = new intervalstore.nonc.IntervalStore0<>(ranges);
           break;
         case MODE_NCLIST:
@@ -928,10 +927,10 @@ public class ISLinkTimingTests
           case MODE_INTERVAL_STORE_NCLIST0:
             store0.remove(r);
             break;
-          case MODE_INTERVAL_STORE_LINK2:
+          case MODE_INTERVAL_STORE_LINK:
             store2.remove(r);
             break;
-          case MODE_INTERVAL_STORE_LINK:
+          case MODE_INTERVAL_STORE_LINK0:
             store3.remove(r);
             break;
           case MODE_NCLIST:

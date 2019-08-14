@@ -84,7 +84,7 @@ public class ISLinkRandomisedTest2
   @Test(groups = "Functional", dataProvider = "scalesOfLife")
   public void test_pseudoRandom(Integer scale)
   {
-    IntervalStore2<SimpleFeature> ncl = new IntervalStore2<>();
+    IntervalStore<SimpleFeature> ncl = new IntervalStore<>();
     List<SimpleFeature> features = new ArrayList<>(
             scale);
 
@@ -108,7 +108,7 @@ public class ISLinkRandomisedTest2
    * @param ncl
    * @param features
    */
-  protected void testDelete_pseudoRandom(IntervalStore2<SimpleFeature> ncl,
+  protected void testDelete_pseudoRandom(IntervalStore<SimpleFeature> ncl,
           List<SimpleFeature> features)
   {
     int deleted = 0;
@@ -164,7 +164,7 @@ public class ISLinkRandomisedTest2
    * @param features
    */
   protected void testAdd_pseudoRandom(Integer scale,
-          IntervalStore2<SimpleFeature> ncl, List<SimpleFeature> features)
+          IntervalStore<SimpleFeature> ncl, List<SimpleFeature> features)
   {
     int count = 0;
     final int size = 50;
@@ -223,7 +223,7 @@ public class ISLinkRandomisedTest2
    *          a list of the ranges stored in ncl
    */
   protected void testFindOverlaps_pseudoRandom(
-          IntervalStore2<SimpleFeature> ncl,
+          IntervalStore<SimpleFeature> ncl,
           int scale, List<SimpleFeature> features)
   {
     int halfScale = scale / 2;
@@ -292,7 +292,7 @@ public class ISLinkRandomisedTest2
    * @param to
    * @param features
    */
-  protected void verifyFindOverlaps(IntervalStore2<SimpleFeature> ncl,
+  protected void verifyFindOverlaps(IntervalStore<SimpleFeature> ncl,
           int from,
           int to, List<SimpleFeature> features)
   {

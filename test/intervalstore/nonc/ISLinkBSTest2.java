@@ -67,7 +67,7 @@ public class ISLinkBSTest2
     // add to a list in unsorted order so constructor has to sort
     List<Range> ranges = Arrays.asList(r1, r1a, r1b, r2, r3, r4, r4a, r4b,
             r5, r5b, r6, r7);
-    IntervalStore2<Range> store = new IntervalStore2<>(ranges);
+    IntervalStore<Range> store = new IntervalStore<>(ranges);
     System.out.println(store);
 
     checkInterval(store, 57, 128,
@@ -116,7 +116,7 @@ public class ISLinkBSTest2
 
   }
 
-  private void checkInterval(IntervalStore2<Range> store, int from, int to,
+  private void checkInterval(IntervalStore<Range> store, int from, int to,
           Range[] target)
   {
     System.out.println("checking interval " + from + "-" + to);

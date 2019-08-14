@@ -61,7 +61,7 @@ import intervalstore.api.IntervalStoreI;
  *          any type providing <code>getBegin()</code>, <code>getEnd()</code>
  *          <code>getContainedBy()</code>, and <code>setContainedBy()</code>
  */
-public class IntervalStore2<T extends IntervalI>
+public class IntervalStore<T extends IntervalI>
         extends AbstractCollection<T> implements IntervalStoreI<T>
 {
 
@@ -153,12 +153,12 @@ public class IntervalStore2<T extends IntervalI>
   /**
    * Constructor
    */
-  public IntervalStore2()
+  public IntervalStore()
   {
     this(true);
   }
 
-  public IntervalStore2(boolean presort)
+  public IntervalStore(boolean presort)
   {
     this(null, presort);
   }
@@ -167,7 +167,7 @@ public class IntervalStore2<T extends IntervalI>
    * Constructor given a list of intervals. Note that the list may get sorted as
    * a side-effect of calling this constructor.
    */
-  public IntervalStore2(List<T> intervals)
+  public IntervalStore(List<T> intervals)
   {
     this(intervals, true);
   }
@@ -179,7 +179,7 @@ public class IntervalStore2<T extends IntervalI>
    * @param intervals
    * @param presort
    */
-  public IntervalStore2(List<T> intervals, boolean presort)
+  public IntervalStore(List<T> intervals, boolean presort)
   {
     this(intervals, presort, null, false);
   }
@@ -197,7 +197,7 @@ public class IntervalStore2<T extends IntervalI>
    * @param bigendian
    *          true if the comparator sorts [10-30] before [10-20]
    */
-  public IntervalStore2(List<T> intervals, boolean presort,
+  public IntervalStore(List<T> intervals, boolean presort,
           Comparator<? super IntervalI> comparator, boolean bigendian)
   {
     this.intervals = (intervals == null ? new ArrayList<>() : intervals);
