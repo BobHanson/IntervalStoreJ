@@ -269,6 +269,7 @@ public class ISLinkTimingTests
   /**
    * Print system information and column headings.
    */
+  @SuppressWarnings("deprecation")
   @BeforeClass
   public void setUp()
   {
@@ -835,6 +836,8 @@ public class ISLinkTimingTests
         }
         else
         {
+          if (hashcode != hashcodes[j])
+            System.out.println("??");
           assertEquals(ntotal, resultcounts[j]);
           assertEquals(hashcode, hashcodes[j]);
         }

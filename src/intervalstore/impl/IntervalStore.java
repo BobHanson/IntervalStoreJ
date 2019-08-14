@@ -98,6 +98,7 @@ public class IntervalStore<T extends IntervalI>
               : (nestedIterator != null && nestedIterator.hasNext());
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public V next()
     {
@@ -523,7 +524,7 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public List<T> findOverlaps(long start, long end, List<T> result)
   {
-    return findOverlaps(start, end, new ArrayList<T>());
+    return findOverlaps(start, end);
   }
 
   @Override
