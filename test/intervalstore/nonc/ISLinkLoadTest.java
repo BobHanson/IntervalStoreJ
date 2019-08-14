@@ -55,7 +55,7 @@ import junit.extensions.PA;
  * @author gmcarstairs
  *
  */
-public class ISLinkLoadTest2
+public class ISLinkLoadTest
 {
   /*
    * Ensembl and gnomAD variants on human BRAF gene 
@@ -83,7 +83,7 @@ public class ISLinkLoadTest2
 
     {
       String lastChr = null;
-      IntervalStore2<SimpleFeature> fs = new IntervalStore2<>();
+      IntervalStore<SimpleFeature> fs = new IntervalStore<>();
       String line = br.readLine();
 
       while (line != null)
@@ -121,7 +121,7 @@ public class ISLinkLoadTest2
 
             lastChr = chr;
 
-            fs = new IntervalStore2<>();
+            fs = new IntervalStore<>();
           }
           String description = chr + ":" + desc;
           SimpleFeature sf = new SimpleFeature(from, to, description);
@@ -210,10 +210,10 @@ public class ISLinkLoadTest2
    * @param intervals
    * @param title
    */
-  protected IntervalStore2<SimpleFeature> buildIntervalStore(
+  protected IntervalStore<SimpleFeature> buildIntervalStore(
           List<SimpleFeature> intervals, String title)
   {
-    IntervalStore2<SimpleFeature> store = new IntervalStore2<>(
+    IntervalStore<SimpleFeature> store = new IntervalStore<>(
             intervals);
     assertTrue(store.isValid());
     @SuppressWarnings("unchecked")

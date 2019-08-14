@@ -61,59 +61,37 @@ import intervalstore.api.IntervalStoreI;
  *          any type providing <code>getBegin()</code>, <code>getEnd()</code>
  *          <code>getContainedBy()</code>, and <code>setContainedBy()</code>
  */
-public class IntervalStore2<T extends IntervalI>
+public class IntervalStore0<T extends IntervalI>
         extends AbstractCollection<T> implements IntervalStoreI<T>
 {
 
-  public static int binaryLastIntervalSearch(IntervalI[] a, long from,
-          long to, int[] ret)
-  {
-    int start = 0, start2 = 0;
-    int matched = 0;
-    int end = a.length - 1, end2 = a.length;
-    int mid, begin;
-    IntervalI e;
-    while (start <= end)
-    {
-      mid = (start + end) >>> 1;
-      e = a[mid];
-      begin = e.getBegin();
-      switch (Long.signum(begin - from))
-      {
-      case -1:
-        matched = mid;
-        start = mid + 1;
-        break;
-      case 0:
-      case 1:
-        end = mid - 1;
-        if (begin > to)
-        {
-          end2 = mid;
-        }
-        else
-        {
-          start2 = mid;
-        }
-        break;
-      }
-    }
-    ret[0] = end2;
-    start = Math.max(start2, end);
-    end = end2 - 1;
 
+  /**
+   * Search for the LAST interval that starts within or before the query
+   * interval.
+   * 
+   * 
+   * @param a
+   * @param to
+   * @return the matching index, or -1 if there is no match
+   */
+  public static int binaryLastBeginSearch(IntervalI[] a, long to)
+  {
+    int start = 0;
+    int matched = -1;
+
+    int end = a.length - 1;
     while (start <= end)
     {
-      mid = (start + end) >>> 1;
-      e = a[mid];
-      begin = e.getBegin();
-      if (begin > to)
+      int mid = (start + end) >>> 1;
+      IntervalI e = a[mid];
+      if (e.getBegin() > to)
       {
-        ret[0] = mid;
         end = mid - 1;
       }
       else
       {
+        matched = mid;
         start = mid + 1;
       }
 
@@ -127,7 +105,12 @@ public class IntervalStore2<T extends IntervalI>
   private Comparator<? super IntervalI> icompare;
 
   /**
-   * bigendian is what NCList does; change icompare to switch to that
+   * bigendian is what NCList does; change icompare to switch to that; however,
+   * realize that we use littleendian for the reason that then of two ranges
+   * that start at the same position, the one that is longer will be after the
+   * first -- maintaining the monotonic nature of the list, and allowing us to
+   * terminate the reverse link traversal earlier
+   * 
    */
   private boolean bigendian;
 
@@ -148,17 +131,15 @@ public class IntervalStore2<T extends IntervalI>
 
   private int[] offsets;
 
-  private int[] ret = new int[1];
-
   /**
    * Constructor
    */
-  public IntervalStore2()
+  public IntervalStore0()
   {
     this(true);
   }
 
-  public IntervalStore2(boolean presort)
+  public IntervalStore0(boolean presort)
   {
     this(null, presort);
   }
@@ -167,7 +148,7 @@ public class IntervalStore2<T extends IntervalI>
    * Constructor given a list of intervals. Note that the list may get sorted as
    * a side-effect of calling this constructor.
    */
-  public IntervalStore2(List<T> intervals)
+  public IntervalStore0(List<T> intervals)
   {
     this(intervals, true);
   }
@@ -179,7 +160,7 @@ public class IntervalStore2<T extends IntervalI>
    * @param intervals
    * @param presort
    */
-  public IntervalStore2(List<T> intervals, boolean presort)
+  public IntervalStore0(List<T> intervals, boolean presort)
   {
     this(intervals, presort, null, false);
   }
@@ -197,7 +178,7 @@ public class IntervalStore2<T extends IntervalI>
    * @param bigendian
    *          true if the comparator sorts [10-30] before [10-20]
    */
-  public IntervalStore2(List<T> intervals, boolean presort,
+  public IntervalStore0(List<T> intervals, boolean presort,
           Comparator<? super IntervalI> comparator, boolean bigendian)
   {
     this.intervals = (intervals == null ? new ArrayList<>() : intervals);
@@ -321,7 +302,6 @@ public class IntervalStore2<T extends IntervalI>
     return matched;
   }
 
-
   @Override
   public void clear()
   {
@@ -332,6 +312,7 @@ public class IntervalStore2<T extends IntervalI>
     minStart = maxEnd = Integer.MAX_VALUE;
     maxStart = Integer.MIN_VALUE;
   }
+
   /**
    * Compare an interval t to a from/to range for insertion purposes
    * 
@@ -405,10 +386,10 @@ public class IntervalStore2<T extends IntervalI>
   /**
    * Find all overlaps within the given range, inclusively.
    * 
-   * @return a list sorted in descending order of start position
+   * @return a list sorted in descen ntest++; ding order of start position
    * 
    */
-  
+
   @SuppressWarnings("unchecked")
   @Override
   public List<T> findOverlaps(long from, long to, List<T> result)
@@ -436,22 +417,18 @@ public class IntervalStore2<T extends IntervalI>
     if (from > maxEnd || to < minStart)
       return result;
 
-    int index = binaryLastIntervalSearch(ordered, from, to, ret);
-    int index1 = ret[0];
-    if (index1 < 0)
-      return result;
-
-    if (index1 > index + 1)
+    int index = binaryLastBeginSearch(ordered, to);
+    IntervalI sf = null;
+    while (index >= 0 && (sf = ordered[index]).getBegin() >= from)
     {
-      while (--index1 > index)
-      {
-        result.add((T) ordered[index1]);
-      }
+      result.add((T) sf);
+      index--;
     }
+    if (index < 0)
+      return result;
     boolean isMonotonic = false;
-    while (index >= 0)
+    while (true)
     {
-      IntervalI sf = ordered[index];
       if (sf.getEnd() >= from)
       {
         result.add((T) sf);
@@ -463,6 +440,9 @@ public class IntervalStore2<T extends IntervalI>
       int offset = offsets[index];
       isMonotonic = (offset < 0);
       index -= (isMonotonic ? -offset : offset);
+      if (index < 0)
+        break;
+        sf = ordered[index];
     }
     return result;
   }

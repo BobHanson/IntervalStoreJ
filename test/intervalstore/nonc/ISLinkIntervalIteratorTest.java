@@ -43,7 +43,7 @@ import org.testng.annotations.Test;
 
 import intervalstore.impl.Range;
 
-public class ISLinkIntervalIteratorTest1
+public class ISLinkIntervalIteratorTest
 {
   @Test(groups = "Functional")
   public void testNext()
