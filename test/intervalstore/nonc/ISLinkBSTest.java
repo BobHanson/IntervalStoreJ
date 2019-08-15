@@ -55,6 +55,10 @@ public class ISLinkBSTest
 
     Range r0a = new Range(5, 5);
     Range r0b = new Range(6, 8);
+    Range r0c = new Range(5, 7);
+    Range r0d = new Range(5, 8);
+    Range r0e = new Range(5, 6);
+
     Range r1 = new Range(10, 80);
     Range r1a = new Range(10, 100);
     Range r1b = new Range(10, 100);
@@ -71,9 +75,35 @@ public class ISLinkBSTest
 
     // check add not allowing duplicates
     IntervalStore<Range> store = new IntervalStore<>();
-    store.add(r0a);
-    store.add(r0a, false);
 
+    assertTrue(store.add(r0e));
+    assertFalse(store.add(r0e, false));
+
+    System.out.println(store.binaryIdentitySearch(r0e));
+    System.out.println(store.binaryIdentitySearch(r0b));
+    System.out.println(store.binaryIdentitySearch(r0c));
+
+    assertTrue(store.binaryIdentitySearch(r0e) == 0);
+    assertTrue(store.binaryIdentitySearch(r0c) == -2);
+    assertTrue(store.binaryIdentitySearch(r0b) == -2);
+
+    assertTrue(store.add(r0e, true));
+    assertTrue(store.add(r0e, true));
+    assertTrue(store.add(r0e, true));
+
+    System.out.println(store);
+    System.out.println(store.binaryIdentitySearch(r0a));
+    System.out.println(store.binaryIdentitySearch(r0e));
+    System.out.println(store.binaryIdentitySearch(r0b));
+    System.out.println(store.binaryIdentitySearch(r0c));
+    assertTrue(store.binaryIdentitySearch(r0a) == -1);
+    assertTrue(store.binaryIdentitySearch(r0b) == -5);
+    assertTrue(store.binaryIdentitySearch(r0c) == -5);
+    store.add(r0c);
+    System.out.println(store);
+    System.out.println(store.binaryIdentitySearch(r0d));
+    assertTrue(store.binaryIdentitySearch(r0d) == -6);
+    assertTrue(store.binaryIdentitySearch(r0a) == -1);
     // edge case -- one SNP
     checkInterval(new IntervalStore<>(Arrays.asList(r0a)), 5, 5,
             new Range[]
@@ -112,8 +142,14 @@ public class ISLinkBSTest
     checkInterval(store, 6, 6, new Range[] { r0b });
     checkInterval(store, 8, 8, new Range[] { r0b });
     assertTrue(store.remove(r0b));
+    System.out.println(store);
     assertTrue(store.remove(r0a));
+    System.out.println(store);
     assertFalse(store.remove(r0b));
+
+    store.add(r0a);
+    store.add(r0b);
+
     checkInterval(store, 86, 113, new Range[] { r1a, r1b, r6 });
 
     checkInterval(store, 57, 128,

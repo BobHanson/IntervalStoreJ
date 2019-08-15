@@ -268,41 +268,43 @@ public class IntervalStore<T extends IntervalI>
       if (DO_PRESORT && isSorted)
       {
         int start = interval.getBegin();
-        if (intervalCount > 0)
+        int end = interval.getEnd();
+        minStart = Math.min(minStart, start);
+        maxStart = Math.max(maxStart, start);
+        if (intervalCount == 0)
         {
-          if (!allowDuplicates)
-          {
-            int end = interval.getEnd();
-            index = binaryInsertionSearch(start, end);
-            if (index < intervalCount
-                    && intervals[index].equalsInterval(interval))
-            {
-              // System.out.println("rejecting dup " + interval);
-              return false;
-            }
-          }
-
-
-          minStart = Math.min(minStart, start);
-          maxStart = Math.max(maxStart, start);
+          // ignore
         }
+        else if (allowDuplicates)
+        {
+          isSorted = false;
+        }
+        else
+        {
+          index = binaryInsertionSearch(start, end);
+          if (index < intervalCount
+                  && intervals[index].equalsInterval(interval))
+          {
+            // System.out.println("rejecting dup " + interval);
+            return false;
+          }
+        }
+
       }
       else
       {
         isSorted = false;
-        if (!allowDuplicates && findInterval(interval) >= 0) {
+        if (!allowDuplicates && findInterval(interval) >= 0)
+        {
           return false;
         }
-        
+
       }
       IntervalI[] source = intervals;
       if (intervalCount + 1 >= capacity)
       {
         IntervalI[] a = new IntervalI[capacity = capacity << 1];
-        for (int i = 0; i < index; i++)
-        {
-          a[i] = intervals[i];
-        }
+        System.arraycopy(intervals, 0, a, 0, index);
         intervals = a;
       }
       if (intervalCount > index)
@@ -322,16 +324,18 @@ public class IntervalStore<T extends IntervalI>
    * 
    * @param list
    * @param interval
-   * @return
+   * @return index or, if not found, -1 - "would be here"
    */
-  private int binaryIdentitySearch(IntervalI interval)
+  public int binaryIdentitySearch(IntervalI interval)
   {
     int start = 0;
     int r0 = interval.getBegin();
     int r1 = interval.getEnd();
     int end = intervalCount - 1;
-    if (end < 0 || r0 > maxStart || r1 > maxEnd || r0 < minStart)
+    if (end < 0 || r0 < minStart)
       return -1;
+    if (r0 > maxStart)
+      return -1 - intervalCount;
     while (start <= end)
     {
       int mid = (start + end) >>> 1;
@@ -345,29 +349,33 @@ public class IntervalStore<T extends IntervalI>
         end = mid - 1;
         continue;
       case 0:
-        if (intervals[mid].equalsInterval(interval))
+        IntervalI iv = intervals[mid];
+        if (iv.equalsInterval(interval))
           return mid;
-        IntervalI iv;
         // found one; just scan up and down now, first checking the range, but
         // also checking other possible aspects of equivalence.
-        for (int i = mid; ++i <= end;)
+        if (r1 >= iv.getEnd())
         {
-          if ((iv = intervals[i]).getBegin() != r0 || iv.getEnd() != r1)
-            return -1;
-          if (iv.equalsInterval(interval))
-            return i;
+          for (int i = mid; ++i <= end;)
+          {
+            if ((iv = intervals[i]).getBegin() != r0)
+              return -1 - i;
+            if (iv.equalsInterval(interval))
+              return i;
+          }
+          return -1 - ++end;
         }
         for (int i = mid; --i >= start;)
         {
-          if ((iv = intervals[i]).getBegin() != r0 || iv.getEnd() != r1)
-            return -1;
+          if ((iv = intervals[i]).getBegin() != r0)
+            return -1 - ++i;
           if (iv.equalsInterval(interval))
             return i;
         }
-        return -1;
+        return -1 - start;
       }
     }
-    return -1;
+    return -1 - end;
   }
 
   private int binaryInsertionSearch(long from, long to)
@@ -725,7 +733,7 @@ public class IntervalStore<T extends IntervalI>
 
   private int findInterval(IntervalI interval)
   {
-    // int pt = binaryIdentitySearch(interval);
+    int pt = binaryIdentitySearch(interval);
     // if (addPt == intervalCount || offsets[pt] == 0)
     // return pt;
 
@@ -752,6 +760,7 @@ public class IntervalStore<T extends IntervalI>
     // while (++i < intervalCount)
     // intervals[i - 1] = intervals[i];
     // intervalCount--;
+    updateMinMaxStart();
     return (isTainted = true);
   }
 
@@ -776,13 +785,22 @@ public class IntervalStore<T extends IntervalI>
   private void sort()
   {
     Arrays.sort(intervals, 0, intervalCount, icompare);
+    updateMinMaxStart();
+    isSorted = true;
+  }
+
+  private void updateMinMaxStart()
+  {
     if (intervalCount > 0)
     {
-      IntervalI r = intervals[intervalCount - 1];
-      minStart = Math.min(minStart, intervals[0].getBegin());
-      maxStart = Math.max(maxStart, r.getBegin());
+      minStart = intervals[0].getBegin();
+      maxStart = intervals[intervalCount - 1].getBegin();
     }
-    isSorted = true;
+    else
+    {
+      minStart = Integer.MAX_VALUE;
+      maxStart = Integer.MIN_VALUE;
+    }
   }
 
   @Override
