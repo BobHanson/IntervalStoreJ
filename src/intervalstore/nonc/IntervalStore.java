@@ -33,10 +33,12 @@ package intervalstore.nonc;
 
 import java.util.AbstractCollection;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import intervalstore.api.IntervalI;
 import intervalstore.api.IntervalStoreI;
@@ -77,18 +79,18 @@ public class IntervalStore<T extends IntervalI>
    * @param ret
    * @return
    */
-  public static int binaryLastIntervalSearch(IntervalI[] a, long from,
+  public int binaryLastIntervalSearch(long from,
           long to, int[] ret)
   {
     int start = 0, start2 = 0;
     int matched = 0;
-    int end = a.length - 1, end2 = a.length;
+    int end = intervalCount - 1, end2 = intervalCount;
     int mid, begin;
     IntervalI e;
     while (start <= end)
     {
       mid = (start + end) >>> 1;
-      e = a[mid];
+      e = intervals[mid];
       begin = e.getBegin();
       switch (Long.signum(begin - from))
       {
@@ -117,7 +119,7 @@ public class IntervalStore<T extends IntervalI>
     while (start <= end)
     {
       mid = (start + end) >>> 1;
-      e = a[mid];
+      e = intervals[mid];
       begin = e.getBegin();
       if (begin > to)
       {
@@ -147,20 +149,24 @@ public class IntervalStore<T extends IntervalI>
 
   private boolean isSorted;
 
-  private List<T> intervals;
-
   private int minStart = Integer.MAX_VALUE, maxStart = Integer.MIN_VALUE,
           maxEnd = Integer.MAX_VALUE;
 
   // private Comparator<IntervalI> icompare = new IntervalComparator();
 
   private boolean isTainted;
-  
-  private IntervalI[] ordered;
+
+  private int capacity = 8;
+
+  private IntervalI[] intervals = new IntervalI[capacity];
 
   private int[] offsets;
 
   private int[] ret = new int[1];
+
+  private int intervalCount;
+
+  private int addPt;
 
   /**
    * Constructor
@@ -212,51 +218,100 @@ public class IntervalStore<T extends IntervalI>
   public IntervalStore(List<T> intervals, boolean presort,
           Comparator<? super IntervalI> comparator, boolean bigendian)
   {
-    this.intervals = (intervals == null ? new ArrayList<>() : intervals);
+    if (intervals != null)
+    {
+      intervals.toArray(
+              this.intervals = new IntervalI[intervalCount = intervals
+                      .size()]);
+    }
     DO_PRESORT = presort;
     icompare = (comparator != null ? comparator
             : bigendian ? IntervalI.COMPARATOR_BIGENDIAN
                     : IntervalI.COMPARATOR_LITTLEENDIAN);
     this.bigendian = bigendian;
 
-    if (DO_PRESORT && this.intervals.size() > 1)
+    if (DO_PRESORT && intervalCount > 1)
     {
       sort();
     }
+    isSorted = DO_PRESORT;
     isTainted = true;
   }
 
   /**
-   * Adds one interval to the store.
+   * Adds one interval to the store, allowing duplicates.
    * 
    * @param interval
    */
   @Override
   public boolean add(T interval)
   {
+    return add(interval, true);
+  }
+
+  /**
+   * Adds one interval to the store, optionally checking for duplicates.
+   * 
+   * @param interval
+   * @param allowDuplicates
+   */
+  public boolean add(T interval, boolean allowDuplicates)
+  {
     if (interval == null)
     {
       return false;
     }
 
-    int start = interval.getBegin();
-    int end = interval.getEnd();
-    minStart = Math.min(minStart, start);
-    maxStart = Math.max(maxStart, start);
-
     synchronized (intervals)
     {
-      if (DO_PRESORT)
+      int index = intervalCount;
+      if (DO_PRESORT && isSorted)
       {
-        intervals.add(binaryInsertionSearch(intervals, start, end),
-                interval);
-        isSorted = true;
+        int start = interval.getBegin();
+        if (intervalCount > 0)
+        {
+          if (!allowDuplicates)
+          {
+            int end = interval.getEnd();
+            index = binaryInsertionSearch(start, end);
+            if (index < intervalCount
+                    && intervals[index].equalsInterval(interval))
+            {
+              // System.out.println("rejecting dup " + interval);
+              return false;
+            }
+          }
+
+
+          minStart = Math.min(minStart, start);
+          maxStart = Math.max(maxStart, start);
+        }
       }
       else
       {
-        intervals.add(interval);
         isSorted = false;
+        if (!allowDuplicates && findInterval(interval) >= 0) {
+          return false;
+        }
+        
       }
+      IntervalI[] source = intervals;
+      if (intervalCount + 1 >= capacity)
+      {
+        IntervalI[] a = new IntervalI[capacity = capacity << 1];
+        for (int i = 0; i < index; i++)
+        {
+          a[i] = intervals[i];
+        }
+        intervals = a;
+      }
+      if (intervalCount > index)
+      {
+        System.arraycopy(source, index, intervals, index + 1,
+                intervalCount - index);
+      }
+      intervals[index] = interval;
+      intervalCount++;
       isTainted = true;
       return true;
     }
@@ -269,18 +324,18 @@ public class IntervalStore<T extends IntervalI>
    * @param interval
    * @return
    */
-  private int binaryIdentitySearch(List<T> list, IntervalI interval)
+  private int binaryIdentitySearch(IntervalI interval)
   {
     int start = 0;
     int r0 = interval.getBegin();
     int r1 = interval.getEnd();
-    int end = list.size() - 1;
+    int end = intervalCount - 1;
     if (end < 0 || r0 > maxStart || r1 > maxEnd || r0 < minStart)
       return -1;
     while (start <= end)
     {
       int mid = (start + end) >>> 1;
-      IntervalI r = list.get(mid);
+      IntervalI r = intervals[mid];
       switch (Integer.signum(r.getBegin() - r0))
       {
       case -1:
@@ -290,33 +345,43 @@ public class IntervalStore<T extends IntervalI>
         end = mid - 1;
         continue;
       case 0:
-        // found one; just scan up and down now
-        for (int i = mid; i <= end; i++)
-          if ((r = list.get(i)).getEnd() == r1 && r.getBegin() == r0
-                  && r.equals(interval))
+        if (intervals[mid].equalsInterval(interval))
+          return mid;
+        IntervalI iv;
+        // found one; just scan up and down now, first checking the range, but
+        // also checking other possible aspects of equivalence.
+        for (int i = mid; ++i <= end;)
+        {
+          if ((iv = intervals[i]).getBegin() != r0 || iv.getEnd() != r1)
+            return -1;
+          if (iv.equalsInterval(interval))
             return i;
+        }
         for (int i = mid; --i >= start;)
-          if ((r = list.get(i)).getEnd() == r1 && r.getBegin() == r0
-                  && r.equals(interval))
+        {
+          if ((iv = intervals[i]).getBegin() != r0 || iv.getEnd() != r1)
+            return -1;
+          if (iv.equalsInterval(interval))
             return i;
+        }
         return -1;
       }
     }
     return -1;
   }
 
-  private int binaryInsertionSearch(List<T> list, long from, long to)
+  private int binaryInsertionSearch(long from, long to)
   {
-    int matched = list.size();
+    int matched = intervalCount;
     int end = matched - 1;
     int start = matched;
-    if (end < 0 || from > list.get(end).getEnd()
-            || from < list.get(start = 0).getBegin())
+    if (end < 0 || from > intervals[end].getEnd()
+            || from < intervals[start = 0].getBegin())
       return start;
     while (start <= end)
     {
       int mid = (start + end) >>> 1;
-      switch (compareRange(list.get(mid), from, to))
+      switch (compareRange(intervals[mid], from, to))
       {
       case 0:
         return mid;
@@ -337,10 +402,10 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public void clear()
   {
-    intervals.clear();
-    ordered = null;
-    offsets = null;
+    intervalCount = 0;
+    isSorted = true;
     isTainted = true;
+    offsets = null;
     minStart = maxEnd = Integer.MAX_VALUE;
     maxStart = Integer.MIN_VALUE;
   }
@@ -354,7 +419,7 @@ public class IntervalStore<T extends IntervalI>
    *         [bigendian: end is before to | littleendian: end is after to], else
    *         -1
    */
-  private int compareRange(T t, long from, long to)
+  private int compareRange(IntervalI t, long from, long to)
   {
     int order = Long.signum(t.getBegin() - from);
     return (order == 0
@@ -365,17 +430,23 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public boolean contains(Object entry)
   {
-    return listContains(intervals, entry);
+    if (entry == null || intervalCount == 0)
+      return false;
+    if (!isSorted)
+    {
+      sort();
+    }
+    return (findInterval((IntervalI) entry) >= 0);
   }
 
   public boolean containsInterval(IntervalI outer, IntervalI inner)
   {
     ensureFinalized();
-    int index = binaryIdentitySearch(intervals, inner);
+    int index = binaryIdentitySearch(inner);
     if (index >= 0)
       while ((index = index - Math.abs(offsets[index])) >= 0)
       {
-        if (ordered[index] == outer)
+        if (intervals[index] == outer)
         {
           return true;
         }
@@ -385,17 +456,15 @@ public class IntervalStore<T extends IntervalI>
 
   private void ensureFinalized()
   {
-
-    int n = intervals.size();
-    if (isTainted && n > 1)
+    if (isTainted && intervalCount > 1)
     {
       if (!isSorted)
       {
         sort();
       }
-      ordered = intervals.toArray(new IntervalI[n]);
-      offsets = new int[n];
-      linkFeatures(ordered);
+      if (offsets == null || offsets.length < intervalCount)
+        offsets = new int[intervalCount];
+      linkFeatures();
       isTainted = false;
     }
   }
@@ -429,16 +498,15 @@ public class IntervalStore<T extends IntervalI>
     {
       result = new ArrayList<>();
     }
-    int n = intervals.size();
-    switch (n)
+    switch (intervalCount)
     {
     case 0:
       return result;
     case 1:
-      T sf = intervals.get(0);
+      IntervalI sf = intervals[0];
       if (sf.getBegin() <= to && sf.getEnd() >= from)
       {
-        result.add(sf);
+        result.add((T) sf);
       }
       return result;
     }
@@ -447,7 +515,7 @@ public class IntervalStore<T extends IntervalI>
 
     if (from > maxEnd || to < minStart)
       return result;
-    int index = binaryLastIntervalSearch(ordered, from, to, ret);
+    int index = binaryLastIntervalSearch(from, to, ret);
     int index1 = ret[0];
     if (index1 < 0)
       return result;
@@ -456,13 +524,13 @@ public class IntervalStore<T extends IntervalI>
     {
       while (--index1 > index)
       {
-        result.add((T) ordered[index1]);
+        result.add((T) intervals[index1]);
       }
     }
     boolean isMonotonic = false;
     while (index >= 0)
     {
-      IntervalI sf = ordered[index];
+      IntervalI sf = intervals[index];
       if (sf.getEnd() >= from)
       {
         result.add((T) sf);
@@ -482,14 +550,14 @@ public class IntervalStore<T extends IntervalI>
   public IntervalI get(int i)
   {
     ensureFinalized();
-    return (i < 0 || i >= ordered.length ? null : ordered[i]);
+    return (i < 0 || i >= intervalCount ? null : intervals[i]);
   }
 
   private int getContainedBy(int index, int begin)
   {
     while (index >= 0)
     {
-      IntervalI sf = ordered[index];
+      IntervalI sf = intervals[index];
       if (sf.getEnd() >= begin)
       {
         // System.out.println("\nIS found " + sf0.getIndex1() + ":" + sf0
@@ -504,17 +572,16 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public int getDepth()
   {
-    int n = intervals.size();
-    if (n < 2)
+    if (intervalCount < 2)
     {
-      return n;
+      return intervalCount;
     }
     ensureFinalized();
     int maxDepth = 1;
     IntervalI root = null;
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < intervalCount; i++)
     {
-      IntervalI element = ordered[i];
+      IntervalI element = intervals[i];
       if (offsets[i] == IntervalI.NOT_CONTAINED)
       {
         root = element;
@@ -524,7 +591,7 @@ public class IntervalStore<T extends IntervalI>
       int offset;
       while ((index = index - Math.abs(offset = offsets[index])) >= 0)
       {
-        element = ordered[index];
+        element = intervals[index];
         if (++depth > maxDepth && (element == root || offset < 0))
         {
           maxDepth = depth;
@@ -566,24 +633,43 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public Iterator<T> iterator()
   {
-    return intervals.iterator();
+    return new Iterator<T>()
+    {
+
+      private int next;
+
+      @Override
+      public boolean hasNext()
+      {
+        return next < intervalCount;
+      }
+
+      @SuppressWarnings("unchecked")
+      @Override
+      public T next()
+      {
+        if (next >= intervalCount)
+          throw new NoSuchElementException();
+        return (T) intervals[next++];
+      }
+
+    };
   }
 
-  private void linkFeatures(IntervalI[] features)
+  private void linkFeatures()
   {
-    int n = features.length;
-    if (n == 0)
+    if (intervalCount == 0)
       return;
-    maxEnd = features[0].getEnd();
+    maxEnd = intervals[0].getEnd();
     offsets[0] = IntervalI.NOT_CONTAINED;
-    if (n == 1)
+    if (intervalCount == 1)
     {
       return;
     }
     boolean isMonotonic = true;
-    for (int i = 1; i < n; i++)
+    for (int i = 1; i < intervalCount; i++)
     {
-      IntervalI sf = features[i];
+      IntervalI sf = intervals[i];
       int begin = sf.getBegin();
       int index = (begin <= maxEnd ? getContainedBy(i - 1, begin) : -1);
         // System.out.println(sf + " is contained by "
@@ -600,42 +686,22 @@ public class IntervalStore<T extends IntervalI>
 
   }
 
-  /**
-   * Answers true if the list contains the interval, else false. This method is
-   * optimised for the condition that the list is sorted on interval start
-   * position ascending, and will give unreliable results if this does not hold.
-   * 
-   * @param intervals
-   * @param entry
-   * @return
-   */
-  protected boolean listContains(List<T> intervals, Object entry)
-  {
-    return (intervals != null && entry != null
-            && (isSorted
-                    ? binaryIdentitySearch(intervals,
-                            (IntervalI) entry) >= 0
-                    : intervals.contains(entry)));
-  }
-
   @Override
   public String prettyPrint()
   {
-    int n = intervals.size();
-    if (n == 0)
+    switch (intervalCount)
     {
+    case 0:
       return "";
-    }
-    if (n == 1)
-    {
-      return intervals.get(0) + "\n";
+    case 1:
+      return intervals[0] + "\n";
     }
     ensureFinalized();
     String sep = "\t";
     StringBuffer sb = new StringBuffer();
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < intervalCount; i++)
     {
-      IntervalI range = ordered[i];
+      IntervalI range = intervals[i];
       int index = i;
       while ((index = index - Math.abs(offsets[index])) >= 0)
       {
@@ -653,8 +719,22 @@ public class IntervalStore<T extends IntervalI>
     // {
     // throw new NullPointerException();
     // }
-    return (o != null && intervals.size() > 0
+    return (o != null && intervalCount > 0
             && removeInterval((IntervalI) o));
+  }
+
+  private int findInterval(IntervalI interval)
+  {
+    // int pt = binaryIdentitySearch(interval);
+    // if (addPt == intervalCount || offsets[pt] == 0)
+    // return pt;
+
+    if (isSorted)
+      return binaryIdentitySearch(interval);
+    int i = intervalCount;
+    while (--i >= 0 && !intervals[i].equalsInterval(interval))
+      ;
+    return i;
   }
 
   /**
@@ -665,14 +745,13 @@ public class IntervalStore<T extends IntervalI>
    */
   protected boolean removeInterval(IntervalI entry)
   {
-    if (!isSorted)
-    {
-      return intervals.remove(entry);
-    }
-    int i = binaryIdentitySearch(intervals, entry);
+    int i = findInterval(entry);
     if (i < 0)
       return false;
-    intervals.remove(i);
+    System.arraycopy(intervals, i + 1, intervals, i, --intervalCount - i);
+    // while (++i < intervalCount)
+    // intervals[i - 1] = intervals[i];
+    // intervalCount--;
     return (isTainted = true);
   }
 
@@ -680,7 +759,7 @@ public class IntervalStore<T extends IntervalI>
   public boolean revalidate()
   {
     isTainted = true;
-    isSorted = true;
+    isSorted = false;
     ensureFinalized();
     return true;
   }
@@ -688,7 +767,7 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public int size()
   {
-    return intervals.size();
+    return intervalCount;
   }
 
   /**
@@ -696,11 +775,11 @@ public class IntervalStore<T extends IntervalI>
    */
   private void sort()
   {
-    Collections.sort(intervals, icompare);
-    if (intervals.size() > 0)
+    Arrays.sort(intervals, 0, intervalCount, icompare);
+    if (intervalCount > 0)
     {
-      T r = intervals.get(intervals.size() - 1);
-      minStart = Math.min(minStart, intervals.get(0).getBegin());
+      IntervalI r = intervals[intervalCount - 1];
+      minStart = Math.min(minStart, intervals[0].getBegin());
       maxStart = Math.max(maxStart, r.getBegin());
     }
     isSorted = true;
