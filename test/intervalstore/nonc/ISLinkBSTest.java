@@ -32,6 +32,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package intervalstore.nonc;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -67,6 +69,11 @@ public class ISLinkBSTest
     Range r6 = new Range(70, 120);
     Range r7 = new Range(78, 78);
 
+    // check add not allowing duplicates
+    IntervalStore<Range> store = new IntervalStore<>();
+    store.add(r0a);
+    store.add(r0a, false);
+
     // edge case -- one SNP
     checkInterval(new IntervalStore<>(Arrays.asList(r0a)), 5, 5,
             new Range[]
@@ -97,13 +104,16 @@ public class ISLinkBSTest
     List<Range> ranges = Arrays.asList(r0a, r0b, r1, r1a, r1b, r2, r3, r4,
             r4a, r4b,
             r5, r5b, r6, r7);
-    IntervalStore<Range> store = new IntervalStore<>(ranges);
+
+    store = new IntervalStore<>(ranges);
     System.out.println(store);
 
     checkInterval(store, 5, 5, new Range[] { r0a });
-
     checkInterval(store, 6, 6, new Range[] { r0b });
     checkInterval(store, 8, 8, new Range[] { r0b });
+    assertTrue(store.remove(r0b));
+    assertTrue(store.remove(r0a));
+    assertFalse(store.remove(r0b));
     checkInterval(store, 86, 113, new Range[] { r1a, r1b, r6 });
 
     checkInterval(store, 57, 128,

@@ -188,8 +188,8 @@ public class ISLinkRandomisedTest
        */
       if (features.contains(feature))
       {
-        // if (!ncl.contains(feature))
-        // System.out.println("???");
+        if (!ncl.contains(feature))
+          System.out.println("???");
         assertTrue(ncl.contains(feature));
         System.out.println(
                 "Duplicate feature generated " + feature.toString());
@@ -206,6 +206,7 @@ public class ISLinkRandomisedTest
        */
       // assertTrue(ncl.isValid(),
       // String.format("Failed for scale = %d, i=%d", scale, i));
+
       assertEquals(ncl.size(), count);
     }
     // System.out.println(ncl.prettyPrint());
