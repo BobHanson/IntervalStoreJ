@@ -85,8 +85,7 @@ public class ISLinkRandomisedTest
   public void test_pseudoRandom(Integer scale)
   {
     IntervalStore<SimpleFeature> ncl = new IntervalStore<>();
-    List<SimpleFeature> features = new ArrayList<>(
-            scale);
+    List<SimpleFeature> features = new ArrayList<>(scale);
 
     testAdd_pseudoRandom(scale, ncl, features);
 
@@ -123,6 +122,12 @@ public class ISLinkRandomisedTest
                       deleted, entry.toString()));
 
       ncl.remove(entry);
+      if (ncl.contains(entry))
+      {
+        ncl.remove(entry);
+        ncl.contains(entry);
+        System.out.println("problem with equals() or equalsInterval()");
+      }
       assertFalse(ncl.contains(entry),
               String.format(
                       "NoNCList still contains deleted entry [%d] '%s'!",
@@ -196,6 +201,10 @@ public class ISLinkRandomisedTest
       }
       else
       {
+        if (ncl.contains(feature))
+          System.out.println(
+                  "feature is not correctly overriding Object.equals");
+        assertFalse(ncl.contains(feature));
         ncl.add(feature);
         features.add(feature);
         count++;

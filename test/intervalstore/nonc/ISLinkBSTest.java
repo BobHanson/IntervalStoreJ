@@ -84,8 +84,8 @@ public class ISLinkBSTest
     System.out.println(store.binaryIdentitySearch(r0c));
 
     assertTrue(store.binaryIdentitySearch(r0e) == 0);
-    assertTrue(store.binaryIdentitySearch(r0c) == -2);
     assertTrue(store.binaryIdentitySearch(r0b) == -2);
+    assertTrue(store.binaryIdentitySearch(r0c) == -2);
 
     assertTrue(store.add(r0e, true));
     assertTrue(store.add(r0e, true));

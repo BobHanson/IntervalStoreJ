@@ -31,6 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package intervalstore.impl;
 
+import intervalstore.api.IntervalI;
+
 /**
  * A simplified feature instance sufficient for unit test purposes
  */
@@ -75,26 +77,26 @@ public class SimpleFeature extends Range
             + (description == null ? 0 : description.hashCode());
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    return (o != null && o instanceof SimpleFeature
+            && equalsInterval((SimpleFeature) o));
+  }
+
   /**
    * Equals method that requires two instances to have the same description, as
    * well as start and end position.
    */
   @Override
-  public boolean equals(Object obj)
+  public boolean equalsInterval(IntervalI o)
   {
-    if (obj != null && obj instanceof SimpleFeature)
-    {
-      SimpleFeature o = (SimpleFeature) obj;
-      if (this.start == o.start && this.end == o.end)
-      {
-        if (this.description == null)
-        {
-          return o.description == null;
-        }
-        return this.description.equals(o.description);
-      }
-    }
-    return false;
+    // must override equalsInterval, not equals
+    return (this.start == ((SimpleFeature) o).start
+            && end == ((SimpleFeature) o).end)
+            && (description == null
+                    ? ((SimpleFeature) o).description == null
+                    : description.equals(((SimpleFeature) o).description));
   }
 
   @Override

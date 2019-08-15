@@ -426,7 +426,7 @@ public class ISLinkTimingTests
   public void testLoadTimeIncrementalAllowDulicates()
   {
 
-    if (QUERY_ONLY)
+    if (true || QUERY_ONLY)
       return;
 
     testIncrLoad(MODE_INTERVAL_STORE_NCLIST, true);

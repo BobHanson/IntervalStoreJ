@@ -281,13 +281,12 @@ public class IntervalStore<T extends IntervalI>
         }
         else
         {
-          index = binaryInsertionSearch(start, end);
-          if (index < intervalCount
-                  && intervals[index].equalsInterval(interval))
+          index = binaryIdentitySearch(interval);
+          if (index >= 0)
           {
-            // System.out.println("rejecting dup " + interval);
             return false;
           }
+          index = -1 - index;
         }
 
       }
@@ -340,7 +339,7 @@ public class IntervalStore<T extends IntervalI>
     {
       int mid = (start + end) >>> 1;
       IntervalI r = intervals[mid];
-      switch (Integer.signum(r.getBegin() - r0))
+      switch (compareRange(r, r0, r1))
       {
       case -1:
         start = mid + 1;
@@ -354,20 +353,17 @@ public class IntervalStore<T extends IntervalI>
           return mid;
         // found one; just scan up and down now, first checking the range, but
         // also checking other possible aspects of equivalence.
-        if (r1 >= iv.getEnd())
+
+        for (int i = mid; ++i <= end;)
         {
-          for (int i = mid; ++i <= end;)
-          {
-            if ((iv = intervals[i]).getBegin() != r0)
-              return -1 - i;
-            if (iv.equalsInterval(interval))
-              return i;
-          }
-          return -1 - ++end;
+          if ((iv = intervals[i]).getBegin() != r0 || iv.getEnd() != r1)
+            break;
+          if (iv.equalsInterval(interval))
+            return i;
         }
         for (int i = mid; --i >= start;)
         {
-          if ((iv = intervals[i]).getBegin() != r0)
+          if ((iv = intervals[i]).getBegin() != r0 || iv.getEnd() < r1)
             return -1 - ++i;
           if (iv.equalsInterval(interval))
             return i;
@@ -375,7 +371,7 @@ public class IntervalStore<T extends IntervalI>
         return -1 - start;
       }
     }
-    return -1 - end;
+    return -1 - start;
   }
 
   private int binaryInsertionSearch(long from, long to)
@@ -738,7 +734,7 @@ public class IntervalStore<T extends IntervalI>
     // return pt;
 
     if (isSorted)
-      return binaryIdentitySearch(interval);
+      return pt;
     int i = intervalCount;
     while (--i >= 0 && !intervals[i].equalsInterval(interval))
       ;
