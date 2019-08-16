@@ -114,9 +114,13 @@ public class ISLinkRandomisedTest
 
     while (!features.isEmpty())
     {
+
       assertEquals(ncl.size(), features.size());
       int toDelete = random.nextInt(features.size());
       SimpleFeature entry = features.get(toDelete);
+
+      System.out.println(ncl.size() + " " + entry);
+
       assertTrue(ncl.contains(entry),
               String.format("NoNCList doesn't contain entry [%d] '%s'!",
                       deleted, entry.toString()));
@@ -208,6 +212,8 @@ public class ISLinkRandomisedTest
         ncl.add(feature);
         features.add(feature);
         count++;
+        if (ncl.size() != count)
+          System.out.println("???");
       }
 
       /*

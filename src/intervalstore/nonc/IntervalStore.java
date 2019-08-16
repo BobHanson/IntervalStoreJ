@@ -34,6 +34,7 @@ package intervalstore.nonc;
 import java.util.AbstractCollection;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -166,7 +167,11 @@ public class IntervalStore<T extends IntervalI>
 
   private int intervalCount;
 
-  private int addPt;
+  private int added;
+
+  private int deleted;
+
+  private BitSet bsDeleted;
 
   /**
    * Constructor
@@ -221,7 +226,7 @@ public class IntervalStore<T extends IntervalI>
     if (intervals != null)
     {
       intervals.toArray(
-              this.intervals = new IntervalI[intervalCount = intervals
+              this.intervals = new IntervalI[capacity = intervalCount = intervals
                       .size()]);
     }
     DO_PRESORT = presort;
@@ -262,70 +267,137 @@ public class IntervalStore<T extends IntervalI>
       return false;
     }
 
+    if (deleted > 0)
+      finalizeDeletion();
+    if (!isTainted)
+    {
+      offsets = null;
+      isTainted = true;
+    }
+
     synchronized (intervals)
     {
       int index = intervalCount;
+      int start = interval.getBegin();
+
+      if (intervalCount + added + 1 >= capacity)
+      {
+        intervals = finalizeAddition(
+                new IntervalI[capacity = capacity << 1]);
+
+      }
+
       if (DO_PRESORT && isSorted)
       {
-        int start = interval.getBegin();
-        int end = interval.getEnd();
-        minStart = Math.min(minStart, start);
-        maxStart = Math.max(maxStart, start);
         if (intervalCount == 0)
         {
           // ignore
         }
-        else if (allowDuplicates)
-        {
-          isSorted = false;
-        }
         else
         {
-          index = binaryIdentitySearch(interval);
-          if (index >= 0)
+          index = findInterval(interval);
+          if (!allowDuplicates && index >= 0)
           {
             return false;
           }
-          index = -1 - index;
+          if (index < 0)
+            index = -1 - index;
+          else
+            index++;
         }
 
       }
       else
       {
-        isSorted = false;
         if (!allowDuplicates && findInterval(interval) >= 0)
         {
           return false;
         }
 
       }
-      IntervalI[] source = intervals;
-      if (intervalCount + 1 >= capacity)
+
+      if (index == intervalCount)
       {
-        IntervalI[] a = new IntervalI[capacity = capacity << 1];
-        System.arraycopy(intervals, 0, a, 0, index);
-        intervals = a;
+        intervals[intervalCount++] = interval;
+        // System.out.println("added " + intervalCount + " " + interval);
       }
-      if (intervalCount > index)
+      else
       {
-        System.arraycopy(source, index, intervals, index + 1,
-                intervalCount - index);
+        int pt = capacity - ++added;
+        intervals[pt] = interval;
+        // System.out.println("stashed " + pt + " " + interval + " for "
+        // + index + " " + intervals[index]);
+        if (offsets == null)
+          offsets = new int[capacity];
+
+        offsets[pt] = offsets[index];
+
+        offsets[index] = pt;
       }
-      intervals[index] = interval;
-      intervalCount++;
-      isTainted = true;
+
+      minStart = Math.min(minStart, start);
+      maxStart = Math.max(maxStart, start);
       return true;
     }
   }
 
+  private IntervalI[] finalizeAddition(IntervalI[] dest)
+  {
+    if (dest == null)
+      dest = intervals;
+    if (added == 0)
+    {
+      if (intervalCount > 0 && dest != intervals)
+      {
+        System.arraycopy(intervals, 0, dest, 0, intervalCount);
+      }
+      capacity = dest.length;
+      return dest;
+    }
+
+    // array is [(intervalCount)...null...(added)]
+
+    int ntotal = intervalCount + added;
+    for (int ptShift = intervalCount + added, pt = intervalCount; pt >= 0;)
+    {
+      int pt0 = pt;
+      while (--pt >= 0 && offsets[pt] == 0)
+        ;
+      if (pt < 0)
+        pt = 0;
+      int nOK = pt0 - pt;
+      // shift upper intervals right
+      ptShift -= nOK;
+      if (nOK > 0)
+        System.arraycopy(intervals, pt, dest, ptShift, nOK);
+      if (added == 0)
+        break;
+        for (int offset = offsets[pt]; offset > 0; offset = offsets[offset])
+        {
+          dest[--ptShift] = intervals[offset];
+          --added;
+        }
+    }
+    offsets = null;
+    intervalCount = ntotal;
+    capacity = dest.length;
+    return dest;
+  }
+
+  public int binaryIdentitySearch(IntervalI interval)
+  {
+    return binaryIdentitySearch(interval, null);
+  }
   /**
    * for remove() and contains()
    * 
    * @param list
    * @param interval
+   * @param bsIgnore
+   *          for deleted
    * @return index or, if not found, -1 - "would be here"
    */
-  public int binaryIdentitySearch(IntervalI interval)
+  public int binaryIdentitySearch(IntervalI interval, BitSet bsIgnore)
   {
     int start = 0;
     int r0 = interval.getBegin();
@@ -349,7 +421,8 @@ public class IntervalStore<T extends IntervalI>
         continue;
       case 0:
         IntervalI iv = intervals[mid];
-        if (iv.equalsInterval(interval))
+        if ((bsIgnore == null || !bsIgnore.get(mid))
+                && iv.equalsInterval(interval))
           return mid;
         // found one; just scan up and down now, first checking the range, but
         // also checking other possible aspects of equivalence.
@@ -358,14 +431,16 @@ public class IntervalStore<T extends IntervalI>
         {
           if ((iv = intervals[i]).getBegin() != r0 || iv.getEnd() != r1)
             break;
-          if (iv.equalsInterval(interval))
+          if ((bsIgnore == null || !bsIgnore.get(i))
+                  && iv.equalsInterval(interval))
             return i;
         }
         for (int i = mid; --i >= start;)
         {
           if ((iv = intervals[i]).getBegin() != r0 || iv.getEnd() < r1)
             return -1 - ++i;
-          if (iv.equalsInterval(interval))
+          if ((bsIgnore == null || !bsIgnore.get(i))
+                  && iv.equalsInterval(interval))
             return i;
         }
         return -1 - start;
@@ -374,39 +449,39 @@ public class IntervalStore<T extends IntervalI>
     return -1 - start;
   }
 
-  private int binaryInsertionSearch(long from, long to)
-  {
-    int matched = intervalCount;
-    int end = matched - 1;
-    int start = matched;
-    if (end < 0 || from > intervals[end].getEnd()
-            || from < intervals[start = 0].getBegin())
-      return start;
-    while (start <= end)
-    {
-      int mid = (start + end) >>> 1;
-      switch (compareRange(intervals[mid], from, to))
-      {
-      case 0:
-        return mid;
-      case 1:
-        matched = mid;
-        end = mid - 1;
-        continue;
-      case -1:
-        start = mid + 1;
-        continue;
-      }
-
-    }
-    return matched;
-  }
+  // private int binaryInsertionSearch(long from, long to)
+  // {
+  // int matched = intervalCount;
+  // int end = matched - 1;
+  // int start = matched;
+  // if (end < 0 || from > intervals[end].getEnd()
+  // || from < intervals[start = 0].getBegin())
+  // return start;
+  // while (start <= end)
+  // {
+  // int mid = (start + end) >>> 1;
+  // switch (compareRange(intervals[mid], from, to))
+  // {
+  // case 0:
+  // return mid;
+  // case 1:
+  // matched = mid;
+  // end = mid - 1;
+  // continue;
+  // case -1:
+  // start = mid + 1;
+  // continue;
+  // }
+  //
+  // }
+  // return matched;
+  // }
 
 
   @Override
   public void clear()
   {
-    intervalCount = 0;
+    intervalCount = added = 0;
     isSorted = true;
     isTainted = true;
     offsets = null;
@@ -425,6 +500,8 @@ public class IntervalStore<T extends IntervalI>
    */
   private int compareRange(IntervalI t, long from, long to)
   {
+    if (t == null)
+      System.out.println("???");
     int order = Long.signum(t.getBegin() - from);
     return (order == 0
             ? Long.signum(bigendian ? to - t.getEnd() : t.getEnd() - to)
@@ -436,7 +513,7 @@ public class IntervalStore<T extends IntervalI>
   {
     if (entry == null || intervalCount == 0)
       return false;
-    if (!isSorted)
+    if (!isSorted || deleted > 0)
     {
       sort();
     }
@@ -446,7 +523,7 @@ public class IntervalStore<T extends IntervalI>
   public boolean containsInterval(IntervalI outer, IntervalI inner)
   {
     ensureFinalized();
-    int index = binaryIdentitySearch(inner);
+    int index = binaryIdentitySearch(inner, null);
     if (index >= 0)
       while ((index = index - Math.abs(offsets[index])) >= 0)
       {
@@ -460,9 +537,9 @@ public class IntervalStore<T extends IntervalI>
 
   private void ensureFinalized()
   {
-    if (isTainted && intervalCount > 1)
+    if (isTainted && intervalCount + added > 1)
     {
-      if (!isSorted)
+      if (!isSorted || added > 0 || deleted > 0)
       {
         sort();
       }
@@ -553,8 +630,10 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public IntervalI get(int i)
   {
+    if (i < 0 || i >= intervalCount + added)
+      return null;
     ensureFinalized();
-    return (i < 0 || i >= intervalCount ? null : intervals[i]);
+    return intervals[i];
   }
 
   private int getContainedBy(int index, int begin)
@@ -576,11 +655,11 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public int getDepth()
   {
+    ensureFinalized();
     if (intervalCount < 2)
     {
       return intervalCount;
     }
-    ensureFinalized();
     int maxDepth = 1;
     IntervalI root = null;
     for (int i = 0; i < intervalCount; i++)
@@ -637,6 +716,7 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public Iterator<T> iterator()
   {
+    finalizeAddition(null);
     return new Iterator<T>()
     {
 
@@ -727,37 +807,110 @@ public class IntervalStore<T extends IntervalI>
             && removeInterval((IntervalI) o));
   }
 
+  /**
+   * Find the interval or return where it should go, possibly into the add
+   * buffer
+   * 
+   * @param interval
+   * @return index (nonnegative) or index where it would go (negative)
+   */
+
   private int findInterval(IntervalI interval)
   {
-    int pt = binaryIdentitySearch(interval);
-    // if (addPt == intervalCount || offsets[pt] == 0)
-    // return pt;
 
     if (isSorted)
-      return pt;
-    int i = intervalCount;
-    while (--i >= 0 && !intervals[i].equalsInterval(interval))
-      ;
-    return i;
+    {
+      int pt = binaryIdentitySearch(interval, null);
+      // if (addPt == intervalCount || offsets[pt] == 0)
+      // return pt;
+      if (pt >= 0 || added == 0 || pt == -1 - intervalCount)
+        return pt;
+      pt = -1 - pt;
+        int start = interval.getBegin();
+        int end = interval.getEnd();
+
+        int match = pt;
+
+        while ((pt = offsets[pt]) != 0)
+        {
+          IntervalI iv = intervals[pt];
+          switch (compareRange(iv, start, end))
+          {
+          case -1:
+            break;
+          case 0:
+            if (iv.equalsInterval(interval))
+              return pt;
+          // fall through
+          case 1:
+          match = pt;
+            continue;
+          }
+        }
+      return -1 - match;
+    }
+    else
+    {
+      int i = intervalCount;
+      while (--i >= 0 && !intervals[i].equalsInterval(interval))
+        ;
+      return i;
+    }
   }
 
   /**
    * Uses a binary search to find the entry and removes it if found.
    * 
-   * @param entry
+   * @param interval
    * @return
    */
-  protected boolean removeInterval(IntervalI entry)
+  protected boolean removeInterval(IntervalI interval)
   {
-    int i = findInterval(entry);
+
+    if (!isSorted || added > 0)
+    {
+      sort();
+    }
+    int i = binaryIdentitySearch(interval, bsDeleted);
     if (i < 0)
       return false;
-    System.arraycopy(intervals, i + 1, intervals, i, --intervalCount - i);
-    // while (++i < intervalCount)
-    // intervals[i - 1] = intervals[i];
-    // intervalCount--;
-    updateMinMaxStart();
+    if (deleted == 0)
+    {
+      if (bsDeleted == null)
+        bsDeleted = new BitSet(intervalCount);
+      else
+        bsDeleted.clear();
+    }
+    bsDeleted.set(i);
+    deleted++;
     return (isTainted = true);
+  }
+
+  private void finalizeDeletion()
+  {
+    if (deleted == 0)
+      return;
+
+    // ......xxx.....xxxx.....xxxxx....
+    // ......^i,pt
+    // ...... .......
+    // ............
+    for (int i = bsDeleted.nextSetBit(0); i >= 0;)
+    {
+      int pt = i;
+      i = bsDeleted.nextClearBit(i + 1);
+      int pt1 = bsDeleted.nextSetBit(i + 1);
+      if (pt1 < 0)
+        pt1 = intervalCount;
+      if (pt1 == pt)
+        break;
+      System.arraycopy(intervals, i, intervals, pt, pt1 - i);
+      i = pt1;
+    }
+    intervalCount -= deleted;
+    deleted = 0;
+    bsDeleted.clear();
+
   }
 
   @Override
@@ -772,7 +925,7 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public int size()
   {
-    return intervalCount;
+    return intervalCount + added - deleted;
   }
 
   /**
@@ -780,7 +933,18 @@ public class IntervalStore<T extends IntervalI>
    */
   private void sort()
   {
-    Arrays.sort(intervals, 0, intervalCount, icompare);
+    if (added > 0)
+    {
+      intervals = finalizeAddition(new IntervalI[intervalCount + added]);
+    }
+    else if (deleted > 0)
+    {
+      finalizeDeletion();
+    }
+    else
+    {
+      Arrays.sort(intervals, 0, intervalCount, icompare);
+    }
     updateMinMaxStart();
     isSorted = true;
   }

@@ -150,6 +150,8 @@ public class ISLinkBSTest
     store.add(r0a);
     store.add(r0b);
 
+    System.out.println(store.toString());
+
     checkInterval(store, 86, 113, new Range[] { r1a, r1b, r6 });
 
     checkInterval(store, 57, 128,
