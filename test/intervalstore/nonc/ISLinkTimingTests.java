@@ -69,6 +69,8 @@ import intervalstore.impl.Range;
  * 
  * (7) adds System.gc()
  * 
+ * (8) adds bit-masks for selective testing
+ * 
  * 
  * A class with methods to inspect the performance and scalability of loading
  * and querying IntervalStore and NCList, and also a 'naive' (unordered) list
@@ -92,36 +94,62 @@ import intervalstore.impl.Range;
 public class ISLinkTimingTests
 {
 
-  /**
-   * run IntervalStore tests only
-   */
-  private static final boolean INTERVAL_STORE_ONLY = false;
+  private int TEST_EVERYTHING = 0xFFFFFF;
 
-  /**
-   * include Naive tests (when not IntervalStore-only)
-   */
-  private static final boolean INCLUDE_NAIVE = false;
+  private int TEST_ALL_ACTIONS = TEST_BULK_LOAD | TEST_INCR_DUP
+          | TEST_INCR_NODUP | TEST_QUERY | TEST_REMOVE;
 
-  /**
-   * just test query times
-   */
-  private static final boolean QUERY_ONLY = true;
+  private int TEST_ALL_CODE = TEST_IS_NCLIST | TEST_IS_LINK | TEST_NCLIST
+          | TEST_NAIVE;
 
-  /**
-   * flag to allow testing of alternate versions of impl.IntervalStore
-   */
-  private static final boolean TEST_STORE0 = true;
+  private int TEST_0 = TEST_IS_NCLIST_0 | TEST_IS_LINK_0 | TEST_NCLIST_0;
 
-  /**
-   * flag to allow testing of alternate versions of impl.NCList
-   */
-  private static final boolean TEST_NCLIST0 = true;
+  private int TEST_1 = TEST_IS_NCLIST_1 | TEST_IS_LINK_1 | TEST_NCLIST_1;
 
-  /**
-   * flag to allow testing of alternate versions of nonc.IntervalStore
-   */
+  private int TEST_QUERY_1 = TEST_QUERY | TEST_1;
 
-  private static final boolean TEST_LINK0 = true;
+  private int TEST_INCR = TEST_INCR_DUP | TEST_INCR_NODUP;
+
+  private int testMode = TEST_REMOVE | TEST_1;
+
+  private boolean doTest(int mode)
+  {
+    return (testMode & mode) != 0;
+  }
+
+
+  private static final int TEST_BULK_LOAD = 0x010000;
+
+  private static final int TEST_INCR_DUP = 0x020000;
+
+  private static final int TEST_INCR_NODUP = 0x040000;
+
+  private static final int TEST_QUERY = 0x080000;
+
+  private static final int TEST_REMOVE = 0x100000;
+
+
+
+  private static final int TEST_IS_NCLIST = 0x00000F;
+
+  private static final int TEST_IS_LINK = 0x0000F0;
+
+  private static final int TEST_NCLIST = 0x000F00;
+
+  private static final int TEST_NAIVE = 0x00F000;
+
+  private static final int TEST_IS_NCLIST_0 = 0x000001;
+
+  private static final int TEST_IS_NCLIST_1 = 0x000002;
+
+  private static final int TEST_IS_LINK_0 = 0x000010;
+
+  private static final int TEST_IS_LINK_1 = 0x000020;
+
+  private static final int TEST_NCLIST_0 = 0x000100;
+
+  private static final int TEST_NCLIST_1 = 0x000200;
+
 
   /**
    * flag to reuse result as parameter in nonc.IntervalStore only
@@ -136,7 +164,7 @@ public class ISLinkTimingTests
   /**
    * maximum number of seconds per log cycle to wait before bailing out
    */
-  private static final double MAX_SEC = 1.0;
+  private static final double MAX_SEC = 5.0;
 
   /**
    * factor to multiply first parameter of generateIntervals(sequenceWidth,
@@ -269,6 +297,7 @@ public class ISLinkTimingTests
   /**
    * Print system information and column headings.
    */
+  @SuppressWarnings("deprecation")
   @BeforeClass
   public void setUp()
   {
@@ -344,8 +373,9 @@ public class ISLinkTimingTests
    * @param testName
    * @param count
    * @param data
+   * @param loopCount TODO
    */
-  private boolean logResults(String testName, int count, double[] data)
+  private boolean logResults(String testName, int count, double[] data, int loopCount)
   {
 
     if (data == null)
@@ -359,7 +389,7 @@ public class ISLinkTimingTests
     double totRate = 0D;
     for (int i = 0; i < data.length; i++)
     {
-      rate[i] = data[i] == 0 ? 0D : count / data[i];
+      rate[i] = data[i] == 0 ? 0D : loopCount / data[i];
       totRate += rate[i];
     }
 
@@ -399,133 +429,132 @@ public class ISLinkTimingTests
   public void testLoadTimeBulk()
   {
 
-    if (QUERY_ONLY)
+    if (!doTest(TEST_BULK_LOAD))
       return;
 
-    testBulkLoad(MODE_INTERVAL_STORE_NCLIST);
-    if (TEST_STORE0)
+    if (doTest(TEST_IS_NCLIST_1))
+      testBulkLoad(MODE_INTERVAL_STORE_NCLIST);
+    if (doTest(TEST_IS_NCLIST_0))
       testBulkLoad(MODE_INTERVAL_STORE_NCLIST0);
-    testBulkLoad(MODE_INTERVAL_STORE_LINK);
-    if (TEST_LINK0)
+
+    if (doTest(TEST_IS_LINK_1))
+      testBulkLoad(MODE_INTERVAL_STORE_LINK);
+    if (doTest(TEST_IS_LINK_0))
       testBulkLoad(MODE_INTERVAL_STORE_LINK0);
 
-    if (INTERVAL_STORE_ONLY)
-      return;
-
-    testBulkLoad(MODE_NCLIST);
-    if (TEST_NCLIST0)
+    if (doTest(TEST_NCLIST_1))
+      testBulkLoad(MODE_NCLIST);
+    if (doTest(TEST_NCLIST_0))
       testBulkLoad(MODE_NCLIST0);
 
-    if (!INCLUDE_NAIVE)
-      return;
-
-    testBulkLoad(MODE_NAIVE);
-  }
-
-  public void testLoadTimeIncrementalNoDuplicates()
-  {
-
-    if (QUERY_ONLY)
-      return;
-
-    testIncrLoad(MODE_INTERVAL_STORE_NCLIST, false);
-    if (TEST_STORE0)
-      testIncrLoad(MODE_INTERVAL_STORE_NCLIST0, false);
-    testIncrLoad(MODE_INTERVAL_STORE_LINK, false);
-    if (TEST_LINK0)
-      testIncrLoad(MODE_INTERVAL_STORE_LINK0, false);
-
-    if (INTERVAL_STORE_ONLY)
-      return;
-
-    testIncrLoad(MODE_NCLIST, false);
-    if (TEST_NCLIST0)
-      testIncrLoad(MODE_NCLIST0, false);
-
-    if (!INCLUDE_NAIVE)
-      return;
-
-    testIncrLoad(MODE_NAIVE, false);
+    if (doTest(TEST_NAIVE))
+      testBulkLoad(MODE_NAIVE);
   }
 
   public void testLoadTimeIncrementalAllowDulicates()
   {
 
-    if (QUERY_ONLY)
+    if (!doTest(TEST_INCR_DUP))
       return;
 
-    testIncrLoad(MODE_INTERVAL_STORE_NCLIST, true);
-    if (TEST_STORE0)
+    if (doTest(TEST_IS_NCLIST_1))
+      testIncrLoad(MODE_INTERVAL_STORE_NCLIST, true);
+    if (doTest(TEST_IS_NCLIST_0))
       testIncrLoad(MODE_INTERVAL_STORE_NCLIST0, true);
-    testIncrLoad(MODE_INTERVAL_STORE_LINK, true);
-    if (TEST_LINK0)
+
+    if (doTest(TEST_IS_LINK_1))
+      testIncrLoad(MODE_INTERVAL_STORE_LINK, true);
+    if (doTest(TEST_IS_LINK_0))
       testIncrLoad(MODE_INTERVAL_STORE_LINK0, true);
 
-    if (INTERVAL_STORE_ONLY)
-      return;
-
-    testIncrLoad(MODE_NCLIST, true);
-    if (TEST_NCLIST0)
+    if (doTest(TEST_NCLIST_1))
+      testIncrLoad(MODE_NCLIST, true);
+    if (doTest(TEST_NCLIST_0))
       testIncrLoad(MODE_NCLIST0, true);
 
-    if (!INCLUDE_NAIVE)
-      return;
-
-    testIncrLoad(MODE_NAIVE, true);
+    if (doTest(TEST_NAIVE))
+      testIncrLoad(MODE_NAIVE, true);
   }
 
   private int[] hashcodes = new int[MAX_LOGN + 1];
 
   private int[] resultcounts = new int[MAX_LOGN + 1];
 
+  public void testLoadTimeIncrementalNoDuplicates()
+  {
+
+    if (!doTest(TEST_INCR_NODUP))
+      return;
+
+    if (doTest(TEST_IS_NCLIST_1))
+      testIncrLoad(MODE_INTERVAL_STORE_NCLIST, false);
+    if (doTest(TEST_IS_NCLIST_0))
+      testIncrLoad(MODE_INTERVAL_STORE_NCLIST0, false);
+
+    if (doTest(TEST_IS_LINK_1))
+      testIncrLoad(MODE_INTERVAL_STORE_LINK, false);
+    if (doTest(TEST_IS_LINK_0))
+      testIncrLoad(MODE_INTERVAL_STORE_LINK0, false);
+
+    if (doTest(TEST_NCLIST_1))
+      testIncrLoad(MODE_NCLIST, false);
+    if (doTest(TEST_NCLIST_0))
+      testIncrLoad(MODE_NCLIST0, false);
+
+    if (doTest(TEST_NAIVE))
+      testIncrLoad(MODE_NAIVE, false);
+  }
+
   public void testQueryTime()
   {
 
-    testQuery(MODE_INTERVAL_STORE_NCLIST);
-    if (TEST_STORE0)
+    if (!doTest(TEST_QUERY))
+      return;
+
+    if (doTest(TEST_IS_NCLIST_1))
+      testQuery(MODE_INTERVAL_STORE_NCLIST);
+    if (doTest(TEST_IS_NCLIST_0))
       testQuery(MODE_INTERVAL_STORE_NCLIST0);
 
-    testQuery(MODE_INTERVAL_STORE_LINK);
-    if (TEST_LINK0)
+    if (doTest(TEST_IS_LINK_1))
+      testQuery(MODE_INTERVAL_STORE_LINK);
+    if (doTest(TEST_IS_LINK_0))
       testQuery(MODE_INTERVAL_STORE_LINK0);
 
-    if (!INTERVAL_STORE_ONLY)
-    {
-
+    if (doTest(TEST_NCLIST_1))
       testQuery(MODE_NCLIST);
-      if (TEST_NCLIST0)
-        testQuery(MODE_NCLIST0);
+    if (doTest(TEST_NCLIST_0))
+      testQuery(MODE_NCLIST0);
 
-      if (INCLUDE_NAIVE)
-        testQuery(MODE_NAIVE);
-    }
+    if (doTest(TEST_NAIVE))
+      testQuery(MODE_NAIVE);
+
     System.out.println("# resultcounts " + Arrays.toString(resultcounts));
+
   }
 
   public void testRemoveTime()
   {
 
-    if (QUERY_ONLY)
+    if (!doTest(TEST_REMOVE))
       return;
 
-    testRemove(MODE_INTERVAL_STORE_NCLIST);
-    if (TEST_STORE0)
+    if (doTest(TEST_IS_NCLIST_1))
+      testRemove(MODE_INTERVAL_STORE_NCLIST);
+    if (doTest(TEST_IS_NCLIST_0))
       testRemove(MODE_INTERVAL_STORE_NCLIST0);
+
     testRemove(MODE_INTERVAL_STORE_LINK);
-    if (TEST_LINK0)
+    if (doTest(TEST_IS_LINK_0))
       testRemove(MODE_INTERVAL_STORE_LINK0);
 
-    if (INTERVAL_STORE_ONLY)
-      return;
-
-    testRemove(MODE_NCLIST);
-    if (TEST_NCLIST0)
+    if (doTest(TEST_NCLIST_1))
+      testRemove(MODE_NCLIST);
+    if (doTest(TEST_NCLIST_0))
       testRemove(MODE_NCLIST0);
 
-    if (!INCLUDE_NAIVE)
-      return;
-
-    testRemove(MODE_NAIVE);
+    if (doTest(TEST_NAIVE))
+      testRemove(MODE_NAIVE);
   }
 
   private void testBulkLoad(String mode)
@@ -539,7 +568,7 @@ public class ISLinkTimingTests
       int count = (int) Math.pow(10, j / LOG_F);
       if (!ok)
       {
-        logResults(testName, count, null);
+        logResults(testName, count, null, count);
         continue;
       }
       double[] data = new double[REPEATS];
@@ -580,7 +609,7 @@ public class ISLinkTimingTests
           data[i - WARMUPS] = elapsed;
         }
       }
-      ok = logResults(testName, count, data);
+      ok = logResults(testName, count, data, count);
     }
 
   }
@@ -598,9 +627,10 @@ public class ISLinkTimingTests
       int count = (int) Math.pow(10, j / LOG_F);
       if (!ok)
       {
-        logResults(testName, count, null);
+        logResults(testName, count, null, count);
         continue;
       }
+      int n = 0;
       double[] data = new double[REPEATS];
       for (int i = 0; i < REPEATS + WARMUPS; i++)
       {
@@ -617,7 +647,12 @@ public class ISLinkTimingTests
             if (allowDuplicates || !store1.contains(r))
             {
               store1.add(r);
+              n++;
             }
+            // else
+            // {
+            // System.out.println(ir + " rejected " + ranges.get(ir));
+            // }
           }
           break;
         case MODE_INTERVAL_STORE_NCLIST0:
@@ -628,6 +663,7 @@ public class ISLinkTimingTests
             if (allowDuplicates || !store0.contains(r))
             {
               store0.add(r);
+              n++;
             }
           }
           break;
@@ -636,12 +672,17 @@ public class ISLinkTimingTests
           intervalstore.nonc.IntervalStore<Range> store2 = new intervalstore.nonc.IntervalStore<>();
           for (int ir = 0; ir < count; ir++)
           {
-            Range r = ranges.get(ir);
-            if (allowDuplicates || !store2.contains(r))
+            if (store2.add(ranges.get(ir), allowDuplicates))
             {
-              store2.add(r);
+              n++;
             }
+            // else
+            // {
+            // System.out.println(
+            // i + " " + ir + " rejected " + ranges.get(ir));
+            // }
           }
+          store2.revalidate();
           break;
         case MODE_INTERVAL_STORE_LINK0:
           intervalstore.nonc.IntervalStore0<Range> store3 = new intervalstore.nonc.IntervalStore0<>();
@@ -651,29 +692,31 @@ public class ISLinkTimingTests
             if (allowDuplicates || !store3.contains(r))
             {
               store3.add(r);
+              n++;
             }
           }
           break;
         case MODE_NCLIST:
-          NCList<Range> nclist = new NCList<>(ranges);
+          NCList<Range> nclist = new NCList<>();
           for (int ir = 0; ir < count; ir++)
           {
             Range r = ranges.get(ir);
             if (allowDuplicates || !nclist.contains(r))
             {
               nclist.add(r);
+              n++;
             }
           }
           break;
         case MODE_NCLIST0:
-          intervalstore.impl0.NCList<Range> nclist0 = new intervalstore.impl0.NCList<>(
-                  ranges);
+          intervalstore.impl0.NCList<Range> nclist0 = new intervalstore.impl0.NCList<>();
           for (int ir = 0; ir < count; ir++)
           {
             Range r = ranges.get(ir);
             if (allowDuplicates || !nclist0.contains(r))
             {
               nclist0.add(r);
+              n++;
             }
           }
         case MODE_NAIVE:
@@ -684,6 +727,7 @@ public class ISLinkTimingTests
             if (!simple.contains(r))
             {
               simple.add(r);
+              n++;
               // should do this here, but it would be prohibitive, even for just
               // one iteration
               // simple.sort(naiveComp);
@@ -698,7 +742,9 @@ public class ISLinkTimingTests
           data[i - WARMUPS] = elapsed;
         }
       }
-      ok = logResults(testName, count, data);
+      ok = logResults(testName, count, data, count);
+      // System.out.println("# size " + n + " rejected "
+      // + (count * (REPEATS + WARMUPS) - n));
     }
   }
 
@@ -725,7 +771,7 @@ public class ISLinkTimingTests
       int count = (int) Math.pow(10, j / LOG_F);
       if (!ok)
       {
-        logResults(testName, count, null);
+        logResults(testName, count, null, QUERY_COUNT);
         continue;
       }
 
@@ -821,7 +867,7 @@ public class ISLinkTimingTests
           data[i - WARMUPS] = elapsed;
         }
       }
-      ok = logResults(testName, count, data);
+      ok = logResults(testName, count, data, QUERY_COUNT);
       // if (QUERY_SHOW_RESULT_COUNT)
       {
         // just check the very last result, to save time
@@ -835,6 +881,8 @@ public class ISLinkTimingTests
         }
         else
         {
+          if (hashcode != hashcodes[j])
+            System.out.println("??");
           assertEquals(ntotal, resultcounts[j]);
           assertEquals(hashcode, hashcodes[j]);
         }
@@ -899,7 +947,7 @@ public class ISLinkTimingTests
       int count = (int) Math.pow(10, j / LOG_F);
       if (!ok)
       {
-        logResults(testName, count, null);
+        logResults(testName, count, null, DELETE_COUNT);
         continue;
       }
       double[] data = new double[REPEATS];
@@ -968,14 +1016,27 @@ public class ISLinkTimingTests
             break;
           }
         }
-
+        switch (mode)
+        {
+        case MODE_INTERVAL_STORE_NCLIST:
+          break;
+        case MODE_INTERVAL_STORE_NCLIST0:
+          break;
+        case MODE_INTERVAL_STORE_LINK:
+          store2.revalidate();
+          break;
+        case MODE_INTERVAL_STORE_LINK0:
+        case MODE_NCLIST:
+        case MODE_NCLIST0:
+        case MODE_NAIVE:
+        }
         long elapsed = System.nanoTime() - now;
         if (i >= WARMUPS)
         {
           data[i - WARMUPS] = elapsed;
         }
       }
-      ok = logResults(testName, count, data);
+      ok = logResults(testName, count, data, DELETE_COUNT);
     }
 
   }

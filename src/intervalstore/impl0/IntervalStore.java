@@ -98,6 +98,7 @@ public class IntervalStore<T extends IntervalI>
               : (nestedIterator != null && nestedIterator.hasNext());
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public V next()
     {

@@ -85,8 +85,7 @@ public class ISLinkRandomisedTest
   public void test_pseudoRandom(Integer scale)
   {
     IntervalStore<SimpleFeature> ncl = new IntervalStore<>();
-    List<SimpleFeature> features = new ArrayList<>(
-            scale);
+    List<SimpleFeature> features = new ArrayList<>(scale);
 
     testAdd_pseudoRandom(scale, ncl, features);
 
@@ -115,14 +114,24 @@ public class ISLinkRandomisedTest
 
     while (!features.isEmpty())
     {
+
       assertEquals(ncl.size(), features.size());
       int toDelete = random.nextInt(features.size());
       SimpleFeature entry = features.get(toDelete);
+
+      System.out.println(ncl.size() + " " + entry);
+
       assertTrue(ncl.contains(entry),
               String.format("NoNCList doesn't contain entry [%d] '%s'!",
                       deleted, entry.toString()));
 
       ncl.remove(entry);
+      if (ncl.contains(entry))
+      {
+        ncl.remove(entry);
+        ncl.contains(entry);
+        System.out.println("problem with equals() or equalsInterval()");
+      }
       assertFalse(ncl.contains(entry),
               String.format(
                       "NoNCList still contains deleted entry [%d] '%s'!",
@@ -188,17 +197,23 @@ public class ISLinkRandomisedTest
        */
       if (features.contains(feature))
       {
-        // if (!ncl.contains(feature))
-        // System.out.println("???");
+        if (!ncl.contains(feature))
+          System.out.println("???");
         assertTrue(ncl.contains(feature));
         System.out.println(
                 "Duplicate feature generated " + feature.toString());
       }
       else
       {
+        if (ncl.contains(feature))
+          System.out.println(
+                  "feature is not correctly overriding Object.equals");
+        assertFalse(ncl.contains(feature));
         ncl.add(feature);
         features.add(feature);
         count++;
+        if (ncl.size() != count)
+          System.out.println("???");
       }
 
       /*
@@ -206,6 +221,7 @@ public class ISLinkRandomisedTest
        */
       // assertTrue(ncl.isValid(),
       // String.format("Failed for scale = %d, i=%d", scale, i));
+
       assertEquals(ncl.size(), count);
     }
     // System.out.println(ncl.prettyPrint());

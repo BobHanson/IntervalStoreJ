@@ -107,6 +107,7 @@ public interface IntervalI
             && i.getEnd() <= getEnd();
   }
 
+
   /**
    * Answers true if this interval properly contains the given interval, that
    * is, it contains it and is larger than it
@@ -120,11 +121,41 @@ public interface IntervalI
             && (i.getBegin() > getBegin() || i.getEnd() < getEnd());
   }
 
-  default boolean equalsInterval(IntervalI i)
-  {
-    return i != null && i.getBegin() == getBegin()
-            && i.getEnd() == getEnd();
-  }
+  /**
+   * Slower than equalsInterval; also includes type.
+   * 
+   * Ensure that subclasses override equals(Object). For example:
+   * 
+   * public boolean equals(Object o) { return o != null && o instanceof XXX &&
+   * equalsInterval((XXX) i); }
+   * 
+   * 
+   * equalsInterval also must be overridden.
+   * 
+   * public boolean equalsInterval(IntervalI i) {return ((SimpleFeature)i).start
+   * == start && ((SimpleFeature)i).end == end && ((SimpleFeature)i).description
+   * == this.description; }
+   * 
+   * 
+   * @param o
+   * @return true if equal, including a type check
+   */
+  @Override
+  abstract boolean equals(Object o);
+
+
+
+  /**
+   * Check that two intervals are equal, in terms of end points, descriptions,
+   * or any other distinguishing features.
+   * 
+   * Used in IntervalStore in searches, since it is faster than equals(), as at
+   * that point we know that we have the correct type.
+   * 
+   * @param i
+   * @return true if equal
+   */
+  abstract boolean equalsInterval(IntervalI i);
 
   default boolean overlapsInterval(IntervalI i)
   {

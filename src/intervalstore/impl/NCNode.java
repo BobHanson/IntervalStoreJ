@@ -363,4 +363,19 @@ class NCNode<T extends IntervalI> implements IntervalI
     return false;
   }
 
+  @SuppressWarnings("unchecked")
+  @Override
+  public boolean equals(Object o)
+  {
+    return o != null && o instanceof NCNode
+            && equalsInterval((NCNode<T>) o);
+  }
+
+  @Override
+  public boolean equalsInterval(IntervalI i)
+  {
+    return getBegin() == i.getBegin() && getEnd() == i.getEnd();
+
+  }
+
 }
