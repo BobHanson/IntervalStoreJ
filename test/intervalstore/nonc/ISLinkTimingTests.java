@@ -110,7 +110,7 @@ public class ISLinkTimingTests
 
   private int TEST_INCR = TEST_INCR_DUP | TEST_INCR_NODUP;
 
-  private int testMode = TEST_REMOVE | TEST_1;
+  private int testMode = TEST_QUERY_1;// TEST_REMOVE | TEST_1;
 
   private boolean doTest(int mode)
   {
