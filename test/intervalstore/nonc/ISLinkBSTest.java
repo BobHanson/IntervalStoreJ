@@ -131,9 +131,10 @@ public class ISLinkBSTest
             { r0b });
 
     // add to a list in unsorted order so constructor has to sort
-    List<Range> ranges = Arrays.asList(r0a, r0b, r1, r1a, r1b, r2, r3, r4,
+    List<Range> ranges = new ArrayList<>(
+            Arrays.asList(r0a, r0b, r1, r1a, r1b, r2, r3, r4,
             r4a, r4b,
-            r5, r5b, r6, r7);
+                    r5, r5b, r6, r7));
 
     store = new IntervalStore<>(ranges);
     System.out.println(store);
@@ -197,6 +198,15 @@ public class ISLinkBSTest
       checkInterval(store, range.getBegin(), range.getEnd(),
               list.toArray(new Range[list.size()]));
     }
+    System.out.println(store);
+    store.remove(r3);
+    store.remove(r4);
+    store.remove(r5);
+    System.out.println(store);
+    ranges.remove(r3);
+    ranges.remove(r4);
+    ranges.remove(r5);
+    checkInterval(store, -1000, 1000, ranges.toArray(new Range[0]));
 
   }
 

@@ -895,21 +895,27 @@ public class IntervalStore<T extends IntervalI>
     // ......^i,pt
     // ...... .......
     // ............
-    for (int i = bsDeleted.nextSetBit(0); i >= 0;)
+    for (int i = bsDeleted.nextSetBit(0), pt = i; i >= 0;)
     {
-      int pt = i;
       i = bsDeleted.nextClearBit(i + 1);
       int pt1 = bsDeleted.nextSetBit(i + 1);
       if (pt1 < 0)
         pt1 = intervalCount;
-      if (pt1 == pt)
+      int n = pt1 - i;
+      System.arraycopy(intervals, i, intervals, pt, n);
+      pt += n;
+      if (pt1 == intervalCount)
+      {
+        for (i = pt1; --i >= pt;)
+          intervals[i] = null;
+        intervalCount -= deleted;
+        deleted = 0;
+        bsDeleted.clear();
         break;
-      System.arraycopy(intervals, i, intervals, pt, pt1 - i);
+      }
       i = pt1;
     }
-    intervalCount -= deleted;
-    deleted = 0;
-    bsDeleted.clear();
+
 
   }
 
