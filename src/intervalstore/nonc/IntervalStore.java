@@ -159,13 +159,13 @@ public class IntervalStore<T extends IntervalI>
 
   private int capacity = 8;
 
-  private IntervalI[] intervals = new IntervalI[capacity];
+  protected IntervalI[] intervals = new IntervalI[capacity];
 
   private int[] offsets;
 
   private int[] ret = new int[1];
 
-  private int intervalCount;
+  protected int intervalCount;
 
   private int added;
 
@@ -268,7 +268,9 @@ public class IntervalStore<T extends IntervalI>
     }
 
     if (deleted > 0)
+    {
       finalizeDeletion();
+    }
     if (!isTainted)
     {
       offsets = null;
@@ -301,9 +303,13 @@ public class IntervalStore<T extends IntervalI>
             return false;
           }
           if (index < 0)
+          {
             index = -1 - index;
+          }
           else
+          {
             index++;
+        }
         }
 
       }
@@ -313,7 +319,7 @@ public class IntervalStore<T extends IntervalI>
         {
           return false;
         }
-
+        isSorted = false;
       }
 
       if (index == intervalCount)
@@ -328,7 +334,9 @@ public class IntervalStore<T extends IntervalI>
         // System.out.println("stashed " + pt + " " + interval + " for "
         // + index + " " + intervals[index]);
         if (offsets == null)
+        {
           offsets = new int[capacity];
+        }
 
         offsets[pt] = offsets[index];
 
@@ -344,7 +352,9 @@ public class IntervalStore<T extends IntervalI>
   private IntervalI[] finalizeAddition(IntervalI[] dest)
   {
     if (dest == null)
+    {
       dest = intervals;
+    }
     if (added == 0)
     {
       if (intervalCount > 0 && dest != intervals)
@@ -362,16 +372,24 @@ public class IntervalStore<T extends IntervalI>
     {
       int pt0 = pt;
       while (--pt >= 0 && offsets[pt] == 0)
+      {
         ;
+      }
       if (pt < 0)
+      {
         pt = 0;
+      }
       int nOK = pt0 - pt;
       // shift upper intervals right
       ptShift -= nOK;
       if (nOK > 0)
+      {
         System.arraycopy(intervals, pt, dest, ptShift, nOK);
+      }
       if (added == 0)
+      {
         break;
+      }
         for (int offset = offsets[pt]; offset > 0; offset = offsets[offset])
         {
           dest[--ptShift] = intervals[offset];
@@ -404,9 +422,13 @@ public class IntervalStore<T extends IntervalI>
     int r1 = interval.getEnd();
     int end = intervalCount - 1;
     if (end < 0 || r0 < minStart)
+    {
       return -1;
+    }
     if (r0 > maxStart)
+    {
       return -1 - intervalCount;
+    }
     while (start <= end)
     {
       int mid = (start + end) >>> 1;
@@ -423,25 +445,35 @@ public class IntervalStore<T extends IntervalI>
         IntervalI iv = intervals[mid];
         if ((bsIgnore == null || !bsIgnore.get(mid))
                 && iv.equalsInterval(interval))
+         {
           return mid;
         // found one; just scan up and down now, first checking the range, but
         // also checking other possible aspects of equivalence.
+        }
 
         for (int i = mid; ++i <= end;)
         {
           if ((iv = intervals[i]).getBegin() != r0 || iv.getEnd() != r1)
+          {
             break;
+          }
           if ((bsIgnore == null || !bsIgnore.get(i))
                   && iv.equalsInterval(interval))
+          {
             return i;
+        }
         }
         for (int i = mid; --i >= start;)
         {
           if ((iv = intervals[i]).getBegin() != r0 || iv.getEnd() < r1)
+          {
             return -1 - ++i;
+          }
           if ((bsIgnore == null || !bsIgnore.get(i))
                   && iv.equalsInterval(interval))
+          {
             return i;
+        }
         }
         return -1 - start;
       }
@@ -500,8 +532,6 @@ public class IntervalStore<T extends IntervalI>
    */
   private int compareRange(IntervalI t, long from, long to)
   {
-    if (t == null)
-      System.out.println("???");
     int order = Long.signum(t.getBegin() - from);
     return (order == 0
             ? Long.signum(bigendian ? to - t.getEnd() : t.getEnd() - to)
@@ -512,7 +542,9 @@ public class IntervalStore<T extends IntervalI>
   public boolean contains(Object entry)
   {
     if (entry == null || intervalCount == 0)
+    {
       return false;
+    }
     if (!isSorted || deleted > 0)
     {
       sort();
@@ -525,6 +557,7 @@ public class IntervalStore<T extends IntervalI>
     ensureFinalized();
     int index = binaryIdentitySearch(inner, null);
     if (index >= 0)
+    {
       while ((index = index - Math.abs(offsets[index])) >= 0)
       {
         if (intervals[index] == outer)
@@ -532,19 +565,22 @@ public class IntervalStore<T extends IntervalI>
           return true;
         }
       }
+    }
     return false;
   }
 
   private void ensureFinalized()
   {
-    if (isTainted && intervalCount + added > 1)
+    if (isTainted)
     {
       if (!isSorted || added > 0 || deleted > 0)
       {
         sort();
       }
       if (offsets == null || offsets.length < intervalCount)
+      {
         offsets = new int[intervalCount];
+      }
       linkFeatures();
       isTainted = false;
     }
@@ -579,7 +615,7 @@ public class IntervalStore<T extends IntervalI>
     {
       result = new ArrayList<>();
     }
-    switch (intervalCount)
+    switch (intervalCount + added)
     {
     case 0:
       return result;
@@ -595,11 +631,15 @@ public class IntervalStore<T extends IntervalI>
     ensureFinalized();
 
     if (from > maxEnd || to < minStart)
+    {
       return result;
+    }
     int index = binaryLastIntervalSearch(from, to, ret);
     int index1 = ret[0];
     if (index1 < 0)
+    {
       return result;
+    }
 
     if (index1 > index + 1)
     {
@@ -631,7 +671,9 @@ public class IntervalStore<T extends IntervalI>
   public IntervalI get(int i)
   {
     if (i < 0 || i >= intervalCount + added)
+    {
       return null;
+    }
     ensureFinalized();
     return intervals[i];
   }
@@ -716,7 +758,7 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public Iterator<T> iterator()
   {
-    finalizeAddition(null);
+    ensureFinalized();
     return new Iterator<T>()
     {
 
@@ -733,7 +775,9 @@ public class IntervalStore<T extends IntervalI>
       public T next()
       {
         if (next >= intervalCount)
+        {
           throw new NoSuchElementException();
+        }
         return (T) intervals[next++];
       }
 
@@ -743,7 +787,9 @@ public class IntervalStore<T extends IntervalI>
   private void linkFeatures()
   {
     if (intervalCount == 0)
+    {
       return;
+    }
     maxEnd = intervals[0].getEnd();
     offsets[0] = IntervalI.NOT_CONTAINED;
     if (intervalCount == 1)
@@ -773,7 +819,7 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public String prettyPrint()
   {
-    switch (intervalCount)
+    switch (intervalCount + added)
     {
     case 0:
       return "";
@@ -824,7 +870,9 @@ public class IntervalStore<T extends IntervalI>
       // if (addPt == intervalCount || offsets[pt] == 0)
       // return pt;
       if (pt >= 0 || added == 0 || pt == -1 - intervalCount)
+      {
         return pt;
+      }
       pt = -1 - pt;
         int start = interval.getBegin();
         int end = interval.getEnd();
@@ -840,7 +888,9 @@ public class IntervalStore<T extends IntervalI>
             break;
           case 0:
             if (iv.equalsInterval(interval))
+            {
               return pt;
+            }
           // fall through
           case 1:
           match = pt;
@@ -853,7 +903,9 @@ public class IntervalStore<T extends IntervalI>
     {
       int i = intervalCount;
       while (--i >= 0 && !intervals[i].equalsInterval(interval))
+      {
         ;
+      }
       return i;
     }
   }
@@ -873,13 +925,19 @@ public class IntervalStore<T extends IntervalI>
     }
     int i = binaryIdentitySearch(interval, bsDeleted);
     if (i < 0)
+    {
       return false;
+    }
     if (deleted == 0)
     {
       if (bsDeleted == null)
+      {
         bsDeleted = new BitSet(intervalCount);
+      }
       else
+      {
         bsDeleted.clear();
+    }
     }
     bsDeleted.set(i);
     deleted++;
@@ -889,7 +947,9 @@ public class IntervalStore<T extends IntervalI>
   private void finalizeDeletion()
   {
     if (deleted == 0)
+    {
       return;
+    }
 
     // ......xxx.....xxxx.....xxxxx....
     // ......^i,pt
@@ -900,14 +960,18 @@ public class IntervalStore<T extends IntervalI>
       i = bsDeleted.nextClearBit(i + 1);
       int pt1 = bsDeleted.nextSetBit(i + 1);
       if (pt1 < 0)
+      {
         pt1 = intervalCount;
+      }
       int n = pt1 - i;
       System.arraycopy(intervals, i, intervals, pt, n);
       pt += n;
       if (pt1 == intervalCount)
       {
         for (i = pt1; --i >= pt;)
+        {
           intervals[i] = null;
+        }
         intervalCount -= deleted;
         deleted = 0;
         bsDeleted.clear();
@@ -932,6 +996,13 @@ public class IntervalStore<T extends IntervalI>
   public int size()
   {
     return intervalCount + added - deleted;
+  }
+
+  @Override
+  public Object[] toArray()
+  {
+    ensureFinalized();
+    return super.toArray();
   }
 
   /**
