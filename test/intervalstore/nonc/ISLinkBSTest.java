@@ -31,7 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package intervalstore.nonc;
 
-import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -46,9 +45,38 @@ import intervalstore.impl.Range;
 
 public class ISLinkBSTest
 {
+
+  @Test(enabled = true)
+  public void test0()
+  {
+
+    /*
+     * make some ranges including co-located, overlapping and nested
+     */
+    Range r1 = new Range(10, 20);
+    Range r2 = new Range(10, 20);
+    Range r3 = new Range(15, 22);
+    Range r4 = new Range(20, 30);
+    Range r5 = new Range(40, 40);
+    Range r6 = new Range(40, 40);
+    Range r7 = new Range(22, 28);
+    Range r8 = new Range(22, 28);
+    Range r9 = new Range(24, 26);
+    Range r10 = new Range(10, 21);
+    // add to a list in unsorted order so constructor has to sort
+    List<Range> ranges = Arrays.asList(r6, r7, r1, r10, r4, r9, r3, r2, r8,
+            r5);
+
+    IntervalStore<Range> store2 = new IntervalStore<>(ranges);
+
+    System.out.println(store2);
+
+  }
+
   @Test(enabled = true) // groups = "functional")
   public void test1()
   {
+
     /*
      * no-arg constructor is not terribly interesting
      */
@@ -74,7 +102,25 @@ public class ISLinkBSTest
     Range r7 = new Range(78, 78);
 
     // check add not allowing duplicates
-    IntervalStore<Range> store = new IntervalStore<>();
+    IntervalStore<Range> store;
+
+    store = new IntervalStore<>();
+    Range r1080 = new Range(10, 80);
+    Range r2070 = new Range(20, 70);
+    Range r7275 = new Range(72, 75);
+    Range r3090 = new Range(30, 90);
+    Range r4060 = new Range(40, 60);
+    Range r5099 = new Range(50, 99);
+    store.add(r1080);
+    store.add(r2070);
+    store.add(r7275);
+    store.add(r3090);
+    store.add(r4060);
+    store.add(r5099);
+
+    System.out.println(store);
+
+    store = new IntervalStore<>();
 
     assertTrue(store.add(r0e));
     assertFalse(store.add(r0e, false));
@@ -85,7 +131,7 @@ public class ISLinkBSTest
 
     assertTrue(store.binaryIdentitySearch(r0e) == 0);
     assertTrue(store.binaryIdentitySearch(r0b) == -2);
-    assertTrue(store.binaryIdentitySearch(r0c) == -2);
+    assertTrue(store.binaryIdentitySearch(r0c) == -1);
 
     assertTrue(store.add(r0e, true));
     assertTrue(store.add(r0e, true));
@@ -96,14 +142,15 @@ public class ISLinkBSTest
     System.out.println(store.binaryIdentitySearch(r0e));
     System.out.println(store.binaryIdentitySearch(r0b));
     System.out.println(store.binaryIdentitySearch(r0c));
-    assertTrue(store.binaryIdentitySearch(r0a) == -1);
+    assertTrue(store.binaryIdentitySearch(r0a) == -5);
     assertTrue(store.binaryIdentitySearch(r0b) == -5);
-    assertTrue(store.binaryIdentitySearch(r0c) == -5);
+    assertTrue(store.binaryIdentitySearch(r0c) == -1);
     store.add(r0c);
     System.out.println(store);
     System.out.println(store.binaryIdentitySearch(r0d));
-    assertTrue(store.binaryIdentitySearch(r0d) == -6);
-    assertTrue(store.binaryIdentitySearch(r0a) == -1);
+    System.out.println(store.binaryIdentitySearch(r0a));
+    assertTrue(store.binaryIdentitySearch(r0d) == -1);
+    assertTrue(store.binaryIdentitySearch(r0a) == -6);
     // edge case -- one SNP
     checkInterval(new IntervalStore<>(Arrays.asList(r0a)), 5, 5,
             new Range[]
@@ -132,7 +179,7 @@ public class ISLinkBSTest
 
     // add to a list in unsorted order so constructor has to sort
     List<Range> ranges = new ArrayList<>(
-            Arrays.asList(r0a, r0b, r1, r1a, r1b, r2, r3, r4,
+            Arrays.asList(r0a, r0b, r1a, r1b, r1, r2, r3, r4,
             r4a, r4b,
                     r5, r5b, r6, r7));
 
@@ -153,32 +200,34 @@ public class ISLinkBSTest
 
     System.out.println(store.toString());
 
+    checkInterval(store, 2, 19, new Range[] { r0a, r0b, r1, r1a, r1b });
+
     checkInterval(store, 86, 113, new Range[] { r1a, r1b, r6 });
 
     checkInterval(store, 57, 128,
             new Range[]
-            { r1, r1a, r1b, r4, r5, r6, r7 });
+            { r1a, r1b, r1, r4, r5, r6, r7 });
 
     checkInterval(store, 86, 113, new Range[] { r1a, r1b, r6 });
 
-    checkInterval(store, 14, 41, new Range[] { r1, r1a, r1b, r2, r3 });
+    checkInterval(store, 14, 41, new Range[] { r1a, r1b, r1, r2, r3 });
 
-    checkInterval(store, 37, 37, new Range[] { r1, r1a, r1b, r3 });
+    checkInterval(store, 37, 37, new Range[] { r1a, r1b, r1, r3 });
 
     checkInterval(store, -114, -41, new Range[] {});
 
 
-    checkInterval(store, 71, 113, new Range[] { r1, r1a, r1b, r4, r6, r7 });
+    checkInterval(store, 71, 113, new Range[] { r1a, r1b, r1, r4, r6, r7 });
 
 
     checkInterval(store, 52, 75,
             new Range[]
-            { r1, r1a, r1b, r4, r4b, r5, r5b, r6 });
+            { r1a, r1b, r1, r4, r4b, r5, r5b, r6 });
     checkInterval(store, 37, 75,
             new Range[]
-            { r1, r1a, r1b, r3, r4, r4a, r4b, r5, r5b, r6 });
+            { r1a, r1b, r1, r3, r4, r4a, r4b, r5, r5b, r6 });
 
-    checkInterval(store, 37, 37, new Range[] { r1, r1a, r1b, r3 });
+    checkInterval(store, 37, 37, new Range[] { r1a, r1b, r1, r3 });
 
 
     Random r = new Random();
@@ -219,7 +268,9 @@ public class ISLinkBSTest
     List<Range> result = store.findOverlaps(from, to);
     for (int i = 0; i < result.size(); i++)
       System.out.println("<" + result.get(i));
-    assertEquals(result.toArray(), target);
+    assertTrue(result.size() == target.length);
+    for (int i = 0; i < target.length; i++)
+      assertTrue(result.contains(target[i]));
   }
 
 }

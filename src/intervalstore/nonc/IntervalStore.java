@@ -46,92 +46,70 @@ import intervalstore.api.IntervalStoreI;
 
 /**
  * 
- * A second idea, doing a double binary sort for the full interval. Seemed like
- * a good idea, but is 50% slower.
+ * A fourth idea, implementing NCList as a pointer system identical in operation
+ * to IntervalStoreJ's implementation using ArrayLists but here using just two
+ * int[] arrays and a single IntervalI[] array that is in the proper order for
+ * holding all nested and unnested arrays.
+ * 
+ * Use of unnesting is optional and can be experimented with by changing the
+ * createUnnested flag to false.
+ * 
+ * Preliminary testing suggests that this implementation is about 10% faster for
+ * store interval size 50, store sequence factor 10, query width -1000 (fixed
+ * 1000-unit-wide window), and query count 100000.
+ * 
+ * Origional note (Mungo Carstairs, IntervalStoreJ)
  * 
  * A Collection class to store interval-associated data, with options for "lazy"
  * sorting so as to speed incremental construction of the data prior to issuing
  * a findOverlap call.
  * 
- * 
  * Accepts duplicate entries but not null values.
  * 
  * 
  * 
- * @author Bob Hanson 2019.08.06
+ * @author Bob Hanson 2019.09.01
  *
  * @param <T>
- *          any type providing <code>getBegin()</code>, <code>getEnd()</code>
- *          <code>getContainedBy()</code>, and <code>setContainedBy()</code>
+ *          any type providing <code>getBegin()</code> and
+ *          <code>getEnd()</code>, primarily
  */
 public class IntervalStore<T extends IntervalI>
         extends AbstractCollection<T> implements IntervalStoreI<T>
 {
 
   /**
-   * Search for the last interval that starts before or at the specified from/to
-   * range and the first interval that starts after it. In the situation that
-   * there are multiple intervals starting at from, this method returns the
-   * first of those.
+   * Search for the last interval that ends at or just after the specified
+   * position. In the situation that there are multiple intervals starting at
+   * pos, this method returns the first of those.
    * 
-   * @param a
+   * @param nests
+   *          the nest-ordered array from createArrays()
    * @param from
-   * @param to
-   * @param ret
-   * @return
+   *          the position at the start of the interval of interest
+   * @param start
+   *          the starting point for the subarray search
+   * @param end
+   *          the ending point for the subarray search
+   * @return index into the nests array or one greater than end if not found
    */
-  public int binaryLastIntervalSearch(long from,
-          long to, int[] ret)
+  public static int binarySearchFirstEndWithin(IntervalI[] nests, long from,
+          int start, int end)
   {
-    int start = 0, start2 = 0;
-    int matched = 0;
-    int end = intervalCount - 1, end2 = intervalCount;
-    int mid, begin;
-    IntervalI e;
+    int matched = end + 1;
+    int mid;
     while (start <= end)
     {
       mid = (start + end) >>> 1;
-      e = intervals[mid];
-      begin = e.getBegin();
-      switch (Long.signum(begin - from))
+      if (nests[mid].getEnd() >= from)
       {
-      case -1:
         matched = mid;
-        start = mid + 1;
-        break;
-      case 0:
-      case 1:
-        end = mid - 1;
-        if (begin > to)
-        {
-          end2 = mid;
-        }
-        else
-        {
-          start2 = mid;
-        }
-        break;
-      }
-    }
-    ret[0] = end2;
-    start = Math.max(start2, end);
-    end = end2 - 1;
-
-    while (start <= end)
-    {
-      mid = (start + end) >>> 1;
-      e = intervals[mid];
-      begin = e.getBegin();
-      if (begin > to)
-      {
-        ret[0] = mid;
         end = mid - 1;
       }
       else
       {
         start = mid + 1;
       }
-
     }
     return matched;
   }
@@ -150,10 +128,10 @@ public class IntervalStore<T extends IntervalI>
 
   private boolean isSorted;
 
+  private boolean createUnnested = true;
+
   private int minStart = Integer.MAX_VALUE, maxStart = Integer.MIN_VALUE,
           maxEnd = Integer.MAX_VALUE;
-
-  // private Comparator<IntervalI> icompare = new IntervalComparator();
 
   private boolean isTainted;
 
@@ -162,8 +140,6 @@ public class IntervalStore<T extends IntervalI>
   protected IntervalI[] intervals = new IntervalI[capacity];
 
   private int[] offsets;
-
-  private int[] ret = new int[1];
 
   protected int intervalCount;
 
@@ -174,8 +150,29 @@ public class IntervalStore<T extends IntervalI>
   private BitSet bsDeleted;
 
   /**
-   * Constructor
+   * the key array that lists the intervals in sub-interval order so that the
+   * binary search can be isolated to a single subinterval just by indicating
+   * start and end within one array
    */
+  private IntervalI[] nests;
+
+  /**
+   * pointers to the starting positions in nests[] for a subinterval; the first
+   * element is the "unnested" pointer when unnesting (2) or the root level nest
+   * pointer when not unnesting (1); the second element is root level nest when
+   * unnesting or the start of nest data when not unnesting; after that, nests
+   * are in contiguous sets of binary-searchable blocks
+   * 
+   */
+  private int[] nestStarts;
+
+  /**
+   * the count of intervals within a nest
+   * 
+   */
+  private int[] nestCounts;
+
+
   public IntervalStore()
   {
     this(true);
@@ -204,7 +201,10 @@ public class IntervalStore<T extends IntervalI>
    */
   public IntervalStore(List<T> intervals, boolean presort)
   {
-    this(intervals, presort, null, false);
+    // setting default to BIG_ENDIAN, meaning
+    // the order will be [10,100] before [10,80]
+    // this order doesn't really matter much.
+    this(intervals, presort, null, true);
   }
 
   /**
@@ -218,29 +218,45 @@ public class IntervalStore<T extends IntervalI>
    *          IntervalI.COMPARATOR_BIGENDIAN, but this could also be one that
    *          sorts by description as well, for example.
    * @param bigendian
-   *          true if the comparator sorts [10-30] before [10-20]
+   *          true if the comparator sorts [10-100] before [10-80]; defaults to
+   *          true
    */
   public IntervalStore(List<T> intervals, boolean presort,
           Comparator<? super IntervalI> comparator, boolean bigendian)
   {
-    if (intervals != null)
-    {
-      intervals.toArray(
-              this.intervals = new IntervalI[capacity = intervalCount = intervals
-                      .size()]);
-    }
-    DO_PRESORT = presort;
     icompare = (comparator != null ? comparator
             : bigendian ? IntervalI.COMPARATOR_BIGENDIAN
                     : IntervalI.COMPARATOR_LITTLEENDIAN);
     this.bigendian = bigendian;
 
+    if (intervals != null)
+    {
+      // So, five hours later, we learn that all my timing has been thrown off
+      // because I used Array.sort, which if you look in the Java JDK is exactly
+      // what Collections.sort is, but for whatever reason, all my times were
+      // high by about 100-200 ms 100% reproducibly. Just one call to Array.sort
+      // prior to the nanotimer start messed it all up. Some sort of memory or
+      // garbage issue; I do not know. But using Collections.sort here fixes the
+      // problem.
+
+      Collections.sort(intervals, icompare);
+      intervals.toArray(
+              this.intervals = new IntervalI[capacity = intervalCount = intervals
+                      .size()]);
+    }
+    DO_PRESORT = presort;
     if (DO_PRESORT && intervalCount > 1)
     {
-      sort();
+      updateMinMaxStart();
+      isSorted = true;
+      isTainted = true;
+      ensureFinalized();
     }
-    isSorted = DO_PRESORT;
-    isTainted = true;
+    else
+    {
+      isSorted = DO_PRESORT;
+      isTainted = true;
+    }
   }
 
   /**
@@ -256,6 +272,12 @@ public class IntervalStore<T extends IntervalI>
 
   /**
    * Adds one interval to the store, optionally checking for duplicates.
+   * 
+   * This fast-adding algorithm uses a double-length int[] (offsets) to hold
+   * pointers into intervals[] that allows continual sorting of an expanding
+   * array buffer. When the time comes, this is cleaned up and packed back into
+   * a standard array, but in the mean time, it can be added to with no loss of
+   * sorting.
    * 
    * @param interval
    * @param allowDuplicates
@@ -298,6 +320,9 @@ public class IntervalStore<T extends IntervalI>
         else
         {
           index = findInterval(interval);
+          // System.out.println("index = " + index + " for " + interval + "\n"
+          // + Arrays.toString(intervals) + "\n"
+          // + Arrays.toString(offsets));
           if (!allowDuplicates && index >= 0)
           {
             return false;
@@ -309,7 +334,7 @@ public class IntervalStore<T extends IntervalI>
           else
           {
             index++;
-        }
+          }
         }
 
       }
@@ -349,6 +374,12 @@ public class IntervalStore<T extends IntervalI>
     }
   }
 
+  /**
+   * Clean up the intervals array into a simple ordered array.
+   * 
+   * @param dest
+   * @return
+   */
   private IntervalI[] finalizeAddition(IntervalI[] dest)
   {
     if (dest == null)
@@ -364,11 +395,12 @@ public class IntervalStore<T extends IntervalI>
       capacity = dest.length;
       return dest;
     }
+    // System.out.println("finalizing " + intervalCount + " " + added);
 
     // array is [(intervalCount)...null...(added)]
 
     int ntotal = intervalCount + added;
-    for (int ptShift = intervalCount + added, pt = intervalCount; pt >= 0;)
+    for (int ptShift = ntotal, pt = intervalCount; pt >= 0;)
     {
       int pt0 = pt;
       while (--pt >= 0 && offsets[pt] == 0)
@@ -390,22 +422,30 @@ public class IntervalStore<T extends IntervalI>
       {
         break;
       }
-        for (int offset = offsets[pt]; offset > 0; offset = offsets[offset])
-        {
-          dest[--ptShift] = intervals[offset];
-          --added;
-        }
+      for (int offset = offsets[pt]; offset > 0; offset = offsets[offset])
+      {
+        dest[--ptShift] = intervals[offset];
+        --added;
+      }
     }
     offsets = null;
     intervalCount = ntotal;
     capacity = dest.length;
+    // System.out.println(Arrays.toString(dest));
     return dest;
   }
 
+  /**
+   * A binary search for a duplicate.
+   * 
+   * @param interval
+   * @return
+   */
   public int binaryIdentitySearch(IntervalI interval)
   {
     return binaryIdentitySearch(interval, null);
   }
+
   /**
    * for remove() and contains()
    * 
@@ -445,10 +485,10 @@ public class IntervalStore<T extends IntervalI>
         IntervalI iv = intervals[mid];
         if ((bsIgnore == null || !bsIgnore.get(mid))
                 && iv.equalsInterval(interval))
-         {
+        {
           return mid;
-        // found one; just scan up and down now, first checking the range, but
-        // also checking other possible aspects of equivalence.
+          // found one; just scan up and down now, first checking the range, but
+          // also checking other possible aspects of equivalence.
         }
 
         for (int i = mid; ++i <= end;)
@@ -461,11 +501,12 @@ public class IntervalStore<T extends IntervalI>
                   && iv.equalsInterval(interval))
           {
             return i;
-        }
+          }
         }
         for (int i = mid; --i >= start;)
         {
-          if ((iv = intervals[i]).getBegin() != r0 || iv.getEnd() < r1)
+          if ((iv = intervals[i]).getBegin() != r0
+                  || (bigendian ? r1 < iv.getEnd() : iv.getEnd() < r1))
           {
             return -1 - ++i;
           }
@@ -473,43 +514,18 @@ public class IntervalStore<T extends IntervalI>
                   && iv.equalsInterval(interval))
           {
             return i;
+          }
         }
-        }
-        return -1 - start;
+        return -1 - mid;
       }
     }
     return -1 - start;
   }
 
-  // private int binaryInsertionSearch(long from, long to)
-  // {
-  // int matched = intervalCount;
-  // int end = matched - 1;
-  // int start = matched;
-  // if (end < 0 || from > intervals[end].getEnd()
-  // || from < intervals[start = 0].getBegin())
-  // return start;
-  // while (start <= end)
-  // {
-  // int mid = (start + end) >>> 1;
-  // switch (compareRange(intervals[mid], from, to))
-  // {
-  // case 0:
-  // return mid;
-  // case 1:
-  // matched = mid;
-  // end = mid - 1;
-  // continue;
-  // case -1:
-  // start = mid + 1;
-  // continue;
-  // }
-  //
-  // }
-  // return matched;
-  // }
-
-
+  /**
+   * Reset all arrays.
+   * 
+   */
   @Override
   public void clear()
   {
@@ -517,9 +533,13 @@ public class IntervalStore<T extends IntervalI>
     isSorted = true;
     isTainted = true;
     offsets = null;
+    intervals = new IntervalI[8];
+    nestStarts = nestCounts = null;
+    nests = null;
     minStart = maxEnd = Integer.MAX_VALUE;
     maxStart = Integer.MIN_VALUE;
   }
+
   /**
    * Compare an interval t to a from/to range for insertion purposes
    * 
@@ -541,7 +561,7 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public boolean contains(Object entry)
   {
-    if (entry == null || intervalCount == 0)
+    if (entry == null || intervalCount == 0 && added == 0 && deleted == 0)
     {
       return false;
     }
@@ -549,25 +569,29 @@ public class IntervalStore<T extends IntervalI>
     {
       sort();
     }
-    return (findInterval((IntervalI) entry) >= 0);
+    int n = findInterval((IntervalI) entry);
+    return (n >= 0);
   }
 
+  /**
+   * Check to see if a given interval is within another.
+   * 
+   * Not implemented.
+   * 
+   * @param outer
+   * @param inner
+   * @return
+   */
   public boolean containsInterval(IntervalI outer, IntervalI inner)
   {
-    ensureFinalized();
-    int index = binaryIdentitySearch(inner, null);
-    if (index >= 0)
-    {
-      while ((index = index - Math.abs(offsets[index])) >= 0)
-      {
-        if (intervals[index] == outer)
-        {
-          return true;
-        }
-      }
-    }
-    return false;
+    return false; // not applicable
   }
+
+  /**
+   * Ensure that all addition, deletion, and sorting has been done, and that the
+   * nesting arrays have been created so that we are ready for findOverlaps().
+   * 
+   */
 
   private void ensureFinalized()
   {
@@ -577,11 +601,8 @@ public class IntervalStore<T extends IntervalI>
       {
         sort();
       }
-      if (offsets == null || offsets.length < intervalCount)
-      {
-        offsets = new int[intervalCount];
-      }
-      linkFeatures();
+      if (intervalCount > 0)
+        createArrays();
       isTainted = false;
     }
   }
@@ -595,18 +616,16 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public List<T> findOverlaps(long from, long to)
   {
-    List<T> list = findOverlaps(from, to, null);
-    Collections.reverse(list);
-    return list;
+    return findOverlaps(from, to, null);
   }
 
   /**
    * Find all overlaps within the given range, inclusively.
    * 
-   * @return a list sorted in descending order of start position
+   * @return a list sorted in the order provided by the features list comparator
    * 
    */
-  
+
   @SuppressWarnings("unchecked")
   @Override
   public List<T> findOverlaps(long from, long to, List<T> result)
@@ -634,37 +653,95 @@ public class IntervalStore<T extends IntervalI>
     {
       return result;
     }
-    int index = binaryLastIntervalSearch(from, to, ret);
-    int index1 = ret[0];
-    if (index1 < 0)
+    if (createUnnested)
     {
-      return result;
+      if (nestCounts[0] > 0)
+        searchNonnested(nestStarts, nestCounts, nests, from, to,
+                (List<IntervalI>) result);
+      if (createUnnested && nestCounts[1] > 0)
+        search(nests, from, to, 1, result);
     }
-
-    if (index1 > index + 1)
+    else
     {
-      while (--index1 > index)
-      {
-        result.add((T) intervals[index1]);
-      }
-    }
-    boolean isMonotonic = false;
-    while (index >= 0)
-    {
-      IntervalI sf = intervals[index];
-      if (sf.getEnd() >= from)
-      {
-        result.add((T) sf);
-      }
-      else if (isMonotonic)
-      {
-        break;
-      }
-      int offset = offsets[index];
-      isMonotonic = (offset < 0);
-      index -= (isMonotonic ? -offset : offset);
+      if (nestCounts[0] > 0)
+        search(nests, from, to, 0, result);
+      if (createUnnested && nestCounts[1] > 0)
+        search(nests, from, to, 1, result);
     }
     return result;
+  }
+
+  /**
+   * A simpler search, since we know we don't have any subintervals. Not
+   * necessary, actually.
+   * 
+   * @param nestStarts
+   * @param nestCounts
+   * @param nests
+   * @param from
+   * @param to
+   * @param result
+   */
+  private static void searchNonnested(int[] nestStarts, int[] nestCounts,
+          IntervalI[] nests, long from, long to,
+          List<IntervalI> result)
+  {
+    int start = nestStarts[0];
+    int n = nestCounts[0];
+    int end = start + n - 1;
+    for (int few = binarySearchFirstEndWithin(nests, from, start,
+            end); few <= end; few++)
+    {
+      IntervalI ival = nests[few];
+      if (ival.getBegin() > to)
+        break;
+      result.add(ival);
+    }
+  }
+
+  /**
+   * The main search of the nests[] array's subarrays
+   * 
+   * @param nests
+   * @param from
+   * @param to
+   * @param nest
+   * @param result
+   */
+  @SuppressWarnings("unchecked")
+  private void search(IntervalI[] nests, long from, long to, int nest,
+          List<T> result)
+  {
+    int start = nestStarts[nest];
+    int n = nestCounts[nest];
+    int end = start + n - 1;
+    IntervalI first = nests[start];
+    IntervalI last = nests[end];
+
+    if (last.getEnd() < from || first.getBegin() > to)
+      return;
+    int few;
+    switch (n)
+    {
+    case 1:
+      few = start;
+      break;
+    case 2:
+      few = (first.getEnd() >= from ? start : end);
+      break;
+    default:
+      few = binarySearchFirstEndWithin(nests, from, start, end);
+      break;
+    }
+    for (; few <= end; few++)
+    {
+      IntervalI ival = nests[few];
+      if (ival.getBegin() > to)
+        break;
+      result.add((T) ival);
+      if (nestCounts[few] > 0)
+        search(nests, from, to, few, result);
+    }
   }
 
   @Override
@@ -678,68 +755,55 @@ public class IntervalStore<T extends IntervalI>
     return intervals[i];
   }
 
-  private int getContainedBy(int index, int begin)
-  {
-    while (index >= 0)
-    {
-      IntervalI sf = intervals[index];
-      if (sf.getEnd() >= begin)
-      {
-        // System.out.println("\nIS found " + sf0.getIndex1() + ":" + sf0
-        // + "\nFS in " + sf.getIndex1() + ":" + sf);
-        return index;
-      }
-      index -= Math.abs(offsets[index]);
-    }
-    return IntervalI.NOT_CONTAINED;
-  }
-
+  /**
+   * Return the deepest level of nesting.
+   * 
+   */
   @Override
   public int getDepth()
   {
     ensureFinalized();
-    if (intervalCount < 2)
-    {
-      return intervalCount;
-    }
-    int maxDepth = 1;
-    IntervalI root = null;
-    for (int i = 0; i < intervalCount; i++)
-    {
-      IntervalI element = intervals[i];
-      if (offsets[i] == IntervalI.NOT_CONTAINED)
-      {
-        root = element;
-      }
-      int depth = 1;
-      int index = i;
-      int offset;
-      while ((index = index - Math.abs(offset = offsets[index])) >= 0)
-      {
-        element = intervals[index];
-        if (++depth > maxDepth && (element == root || offset < 0))
-        {
-          maxDepth = depth;
-          break;
-        }
-      }
-    }
-    return maxDepth;
+    BitSet bsTested = new BitSet();
+    return Math.max((createUnnested ? getDepth(1, bsTested) : 0),
+            getDepth(0, bsTested));
   }
 
+  /**
+   * Iteratively dive deeply.
+   * 
+   * @param pt
+   * @param bsTested
+   * @return
+   */
+  private int getDepth(int pt, BitSet bsTested)
+  {
+    int maxDepth = 0;
+    int depth;
+    int n = nestCounts[pt];
+    if (n == 0 || bsTested.get(pt))
+      return 1;
+    bsTested.set(pt);
+    for (int st = nestStarts[pt], i = st + n; --i >= st;)
+    {
+      if ((depth = getDepth(i, bsTested)) > maxDepth)
+      {
+        maxDepth = depth;
+      }
+    }
+    return maxDepth + 1;
+  }
+
+  /**
+   * Get the number of root-level nests.
+   * 
+   */
   @Override
   public int getWidth()
   {
     ensureFinalized();
-    int w = 0;
-    for (int i = offsets.length; --i >= 0;)
-    {
-      if (offsets[i] > 0)
-      {
-        w++;
-      }
-    }
-    return w;
+    // System.out.println(
+    // "ISList w[0]=" + nestCounts[0] + " w[1]=" + nestCounts[1]);
+    return nestCounts[0] + (createUnnested ? nestCounts[1] : 0);
   }
 
   @Override
@@ -784,62 +848,47 @@ public class IntervalStore<T extends IntervalI>
     };
   }
 
-  private void linkFeatures()
-  {
-    if (intervalCount == 0)
-    {
-      return;
-    }
-    maxEnd = intervals[0].getEnd();
-    offsets[0] = IntervalI.NOT_CONTAINED;
-    if (intervalCount == 1)
-    {
-      return;
-    }
-    boolean isMonotonic = true;
-    for (int i = 1; i < intervalCount; i++)
-    {
-      IntervalI sf = intervals[i];
-      int begin = sf.getBegin();
-      int index = (begin <= maxEnd ? getContainedBy(i - 1, begin) : -1);
-        // System.out.println(sf + " is contained by "
-      // + (index < 0 ? null : starts[index]));
-
-      offsets[i] = (index < 0 ? IntervalI.NOT_CONTAINED
-              : isMonotonic ? index - i : i - index);
-      isMonotonic = (sf.getEnd() > maxEnd);
-      if (isMonotonic)
-      {
-        maxEnd = sf.getEnd();
-      }
-    }
-
-  }
-
+  /**
+   * Indented printing of the intervals.
+   * 
+   */
   @Override
   public String prettyPrint()
   {
-    switch (intervalCount + added)
-    {
-    case 0:
-      return "";
-    case 1:
-      return intervals[0] + "\n";
-    }
     ensureFinalized();
-    String sep = "\t";
     StringBuffer sb = new StringBuffer();
-    for (int i = 0; i < intervalCount; i++)
+    if (createUnnested)
     {
-      IntervalI range = intervals[i];
-      int index = i;
-      while ((index = index - Math.abs(offsets[index])) >= 0)
-      {
-        sb.append(sep);
-      }
-      sb.append(range.toString()).append('\n');
+      sb.append("unnested:");
+      dump(0, sb, "\n");
+      sb.append("\nnested:");
+      dump(1, sb, "\n");
+    }
+    else
+    {
+      dump(0, sb, "\n");
     }
     return sb.toString();
+  }
+
+  /**
+   * Iterative nest dump.
+   * 
+   * @param nest
+   * @param sb
+   * @param sep
+   */
+  private void dump(int nest, StringBuffer sb, String sep)
+  {
+    int pt = nestStarts[nest];
+    int n = nestCounts[nest];
+    sep += "  ";
+
+    for (int i = 0; i < n; i++)
+    {
+      sb.append(sep).append(nests[pt + i].toString());
+      dump(pt + i, sb, sep + "  ");
+    }
   }
 
   @Override
@@ -874,29 +923,29 @@ public class IntervalStore<T extends IntervalI>
         return pt;
       }
       pt = -1 - pt;
-        int start = interval.getBegin();
-        int end = interval.getEnd();
+      int start = interval.getBegin();
+      int end = interval.getEnd();
 
-        int match = pt;
+      int match = pt;
 
-        while ((pt = offsets[pt]) != 0)
+      while ((pt = offsets[pt]) != 0)
+      {
+        IntervalI iv = intervals[pt];
+        switch (compareRange(iv, start, end))
         {
-          IntervalI iv = intervals[pt];
-          switch (compareRange(iv, start, end))
+        case -1:
+          break;
+        case 0:
+          if (iv.equalsInterval(interval))
           {
-          case -1:
-            break;
-          case 0:
-            if (iv.equalsInterval(interval))
-            {
-              return pt;
-            }
-          // fall through
-          case 1:
-          match = pt;
-            continue;
+            return pt;
           }
+          // fall through
+        case 1:
+          match = pt;
+          continue;
         }
+      }
       return -1 - match;
     }
     else
@@ -937,13 +986,17 @@ public class IntervalStore<T extends IntervalI>
       else
       {
         bsDeleted.clear();
-    }
+      }
     }
     bsDeleted.set(i);
     deleted++;
     return (isTainted = true);
   }
 
+  /**
+   * Fill in the gaps of the intervals array after one or more deletions.
+   * 
+   */
   private void finalizeDeletion()
   {
     if (deleted == 0)
@@ -980,9 +1033,12 @@ public class IntervalStore<T extends IntervalI>
       i = pt1;
     }
 
-
   }
 
+  /**
+   * Recreate the key nest arrays.
+   * 
+   */
   @Override
   public boolean revalidate()
   {
@@ -992,12 +1048,19 @@ public class IntervalStore<T extends IntervalI>
     return true;
   }
 
+  /**
+   * Return the total number of intervals in the store.
+   * 
+   */
   @Override
   public int size()
   {
     return intervalCount + added - deleted;
   }
 
+  /**
+   * AbstractCollection override to ensure that we have finalized the store.
+   */
   @Override
   public Object[] toArray()
   {
@@ -1006,7 +1069,7 @@ public class IntervalStore<T extends IntervalI>
   }
 
   /**
-   * Sort intervals by start (lowest first) and end (highest first).
+   * Sort intervals by start.
    */
   private void sort()
   {
@@ -1020,12 +1083,242 @@ public class IntervalStore<T extends IntervalI>
     }
     else
     {
+      // SOMETHING HAPPENS WHEN Arrays.sort is run that
+      // adds 100 ms to a 150 ms run time.
+      // I don't know why.
       Arrays.sort(intervals, 0, intervalCount, icompare);
     }
     updateMinMaxStart();
     isSorted = true;
   }
 
+  // 0 5-5
+  // 1 6-8
+  // 2 10-80
+  // 3 10-100
+  // 4 10-100
+  // 5 20-30
+  // 6 35-40
+  // 7 50-80
+  // 8 51-51
+  // 9 52-52
+  // 10 55-60
+  // 11 56-56
+  // 12 70-120
+  // 13 78-78
+  //
+  // cont [-1, -1, -1, -1, 3, 4, 4, 4, 7, 7, 7, 10, -1, 12]
+  // nests [0, 0, 1, 2, 3, 12, 4, 5, 6, 7, 8, 9, 10, 11, 13]
+  // starts [1, 0, 0, 0, 6, 14, 7, 0, 0, 10, 0, 0, 13, 0, 0]
+  // counts [5, 0, 0, 0, 1, 1, 3, 0, 0, 3, 0, 0, 1, 0, 0]
+
+  /**
+   * Create the key arrays: nests, nestStarts, and nestCounts. The starting
+   * point is getting the container array, which may hold -1 (top level nesting)
+   * and -2 (unnested set, if doing that).
+   * 
+   * This is a pretty complicated method; it was way simpler before I decided to
+   * support nesting as an option.
+   *
+   */
+  private void createArrays()
+  {
+
+    /**
+     * When unnesting, we need a second top-level listing.
+     * 
+     */
+    int incr = (createUnnested ? 2 : 1);
+
+    /**
+     * The three key arrays produced by this method:
+     */
+
+    nests = new IntervalI[intervalCount + incr];
+    nestStarts = new int[intervalCount + incr];
+    nestCounts = new int[intervalCount + incr];
+
+    /**
+     * a temporary array used in Phase Two.
+     */
+
+    int[] counts = new int[intervalCount + incr];
+
+    /**
+     * the objective of Phase One
+     */
+    int[] myContainer = new int[intervalCount];
+
+    myContainer[0] = -incr;
+    counts[0] = 1;
+    int beginLast = intervals[0].getBegin();
+    int endLast = intervals[0].getEnd();
+    int ptLastNot2 = -1;
+    int endLast2 = endLast;
+    int beginLast2 = beginLast;
+
+    // Phase One: Get the temporary container array myContainer.
+
+    for (int i = 1; i < intervalCount; i++)
+    {
+      int pt = i - 1;
+      int end = intervals[i].getEnd();
+      int begin = intervals[i].getBegin();
+
+      // set the pointer to the element that is containing
+      // this interval, or -2 (unnested) or -1 (root-level nest)
+
+      myContainer[i] = -incr;
+
+      // OK, now figure it all out...
+
+      boolean isNested;
+      if (createUnnested)
+      {
+        // Using a method isNested(...) here, because there are different
+        // ways of defining "nested" when start or end are the
+        // same. The definition used here would not be my first choice,
+        // but it matches results for IntervalStoreJ
+        // perfectly, down to the exact number of times that the
+        // binary search runs through its start/mid/end loops in findOverlap.
+
+        // beginLast2 and endLast2 refer to the root-level or unnested level
+
+        if (!isNested(begin, end, beginLast2, endLast2))
+        {
+          isNested = false;
+        }
+        else
+        {
+          // this is tricky; making sure we properly get the
+          // nests that are to be removed from the top-level
+          // unnested list assigned a container -1, while all
+          // top-level nests get -2.
+
+          pt = ptLastNot2;
+          isNested = (pt < 0
+                  || isNested(begin, end, intervals[pt].getBegin(),
+                  intervals[pt].getEnd()));
+          if (!isNested)
+            myContainer[i] = -1;
+        }
+      }
+      else
+      {
+        isNested = isNested(begin, end, beginLast, endLast);
+      }
+
+      // ...almost done...
+
+      if (isNested)
+      {
+        myContainer[i] = pt;
+      }
+      else
+      {
+
+        // monotonic -- find the parent that is doing the nesting
+
+        while ((pt = myContainer[pt]) >= 0)
+        {
+          if (isNested(begin, end, intervals[pt].getBegin(),
+                  intervals[pt].getEnd()))
+          {
+            myContainer[i] = pt;
+            // fully contained by a previous interval
+            // System.out.println("mycontainer " + i + " = " + pt);
+            break;
+          }
+        }
+      }
+
+      // update the counts and pointers
+
+      counts[myContainer[i] + incr]++;
+      if (myContainer[i] == -2)
+      {
+        endLast2 = end;
+        beginLast2 = begin;
+      }
+      else
+      {
+        ptLastNot2 = i;
+        endLast = end;
+        beginLast = begin;
+      }
+    }
+
+    // Phase Two: construct the nests[] array and its associated
+    // starting pointer array and nest element counts. These counts
+    // are actually produced above, but we reconstruct it as a set
+    // of dynamic pointers during construction.
+
+    int nextStart = incr + counts[0];
+    int[] temp = new int[intervalCount + incr];
+    if (createUnnested)
+    {
+
+      // Unnesting requires two separate lists with proper pointers and counts.
+
+      nestStarts[0] = 2;
+      nestStarts[temp[1] = 1] = nextStart;
+      nextStart += counts[1];
+    }
+    else
+    {
+      // When not unnesting, nestStarts points to element 1, and the length
+      // will start out here as 0 but increment as we go. We do know its size
+      // already.
+
+      nestStarts[0] = 1;
+    }
+
+    // Now get all the pointers right and set the nests[] pointer into intervals
+    // correctly.
+
+    for (int i = 0; i < intervalCount; i++)
+    {
+      int n = counts[i + incr];
+      int ptNest = temp[myContainer[i] + incr];
+      int p = nestStarts[ptNest] + nestCounts[ptNest]++;
+      nests[p] = intervals[i];
+      if (n > 0)
+      {
+        temp[i + incr] = p;
+        nestStarts[p] = nextStart;
+        nextStart += n;
+      }
+    }
+
+    // System.out.println("intervals " + Arrays.toString(intervals));
+    // System.out.println("nests " + Arrays.toString(nests));
+    // System.out.println("conts " + Arrays.toString(myContainer));
+    // System.out.println("starts " + Arrays.toString(nestStarts));
+    // System.out.println("counts " + Arrays.toString(nestCounts));
+    // System.out.println("done " + nestCounts[0]);
+  }
+
+  /**
+   * Child-Parent relationships to match IntervalStoreJ. Perhaps a bit arcane?
+   * Objective is to minimize the depth when we can.
+   * 
+   * @param childStart
+   * @param childEnd
+   * @param parentStart
+   * @param parentEnd
+   * @return
+   */
+  private static boolean isNested(int childStart, int childEnd,
+          int parentStart, int parentEnd)
+  {
+    return (parentStart <= childStart && parentEnd > childEnd
+            || parentStart < childStart && parentEnd == childEnd);
+  }
+
+  /**
+   * Just a couple of pointers to help speed findOverlaps along a bit.
+   * 
+   */
   private void updateMinMaxStart()
   {
     if (intervalCount > 0)
