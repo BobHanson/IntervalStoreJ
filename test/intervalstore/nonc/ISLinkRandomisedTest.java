@@ -118,9 +118,6 @@ public class ISLinkRandomisedTest
       assertEquals(ncl.size(), features.size());
       int toDelete = random.nextInt(features.size());
       SimpleFeature entry = features.get(toDelete);
-
-      System.out.println(ncl.size() + " " + entry);
-
       assertTrue(ncl.contains(entry),
               String.format("NoNCList doesn't contain entry [%d] '%s'!",
                       deleted, entry.toString()));
@@ -176,7 +173,7 @@ public class ISLinkRandomisedTest
           IntervalStore<SimpleFeature> ncl, List<SimpleFeature> features)
   {
     int count = 0;
-    final int size = 50;
+    final int size = 3000;
 
     for (int i = 0; i < size; i++)
     {
@@ -209,7 +206,13 @@ public class ISLinkRandomisedTest
           System.out.println(
                   "feature is not correctly overriding Object.equals");
         assertFalse(ncl.contains(feature));
+        if (from == 2 && to == 5)
+          System.out.println("???????" + feature);
         ncl.add(feature);
+        if (!ncl.contains(feature))
+        {
+          System.out.println(ncl.contains(feature));
+        }
         features.add(feature);
         count++;
         if (ncl.size() != count)
@@ -345,6 +348,11 @@ public class ISLinkRandomisedTest
         boolean found = overlaps.contains(sf);
         if (!found)
         {
+          // stop here in debug mode to test again
+          System.out.println(ncl.prettyPrint());
+          System.out
+                  .println("find " + from + " " + to + " not found: " + sf);
+          ncl.revalidate();
           ncl.findOverlaps(from, to);
           System.out.println(overlaps.contains(sf));
         }

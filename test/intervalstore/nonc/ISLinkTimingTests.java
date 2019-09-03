@@ -110,7 +110,8 @@ public class ISLinkTimingTests
 
   private int TEST_INCR = TEST_INCR_DUP | TEST_INCR_NODUP;
 
-  private int testMode = TEST_QUERY_1;// TEST_REMOVE | TEST_1;
+  private int testMode = TEST_QUERY | TEST_1 | TEST_0;// TEST_REMOVE |
+                                                             // TEST_1;
 
   private boolean doTest(int mode)
   {
@@ -126,7 +127,9 @@ public class ISLinkTimingTests
 
   private static final int TEST_QUERY = 0x080000;
 
-  private static final int TEST_REMOVE = 0x100000;
+  private static final int TEST_QUERY2 = 0x100000;
+
+  private static final int TEST_REMOVE = 0x200000;
 
 
 
@@ -182,7 +185,7 @@ public class ISLinkTimingTests
    * 50 generally; -1 for SNPs
    * 
    */
-  private static final int QUERY_STORE_INTERVAL_SIZE = 50;
+  private static final int QUERY_STORE_INTERVAL_SIZE = 50;// -1;
 
   /**
    * width of query intervals; negative for absolute, positive for max value
@@ -255,9 +258,9 @@ public class ISLinkTimingTests
 
   private static final String MODE_INTERVAL_STORE_LINK0 = "IntStoreLink0";
 
-  private static final String MODE_NCLIST = "NCList";
+  private static final String MODE_NCLIST = "NCList-Java";
 
-  private static final String MODE_NCLIST0 = "NCList0";
+  private static final String MODE_NCLIST0 = "NCList0-Java";
 
   private static final String MODE_NAIVE = "Naive";
 
@@ -293,6 +296,15 @@ public class ISLinkTimingTests
     }
 
   };
+
+  public static void main(String[] args)
+  {
+    ISLinkTimingTests test = new ISLinkTimingTests();
+    test.setUp();
+    test.testQueryTime();
+    test.tearDown();
+
+  }
 
   /**
    * Print system information and column headings.
@@ -533,6 +545,34 @@ public class ISLinkTimingTests
 
   }
 
+  public void testQueryTime2()
+  {
+
+    if (!doTest(TEST_QUERY2))
+      return;
+
+    if (doTest(TEST_IS_NCLIST_1))
+      testQuery2(MODE_INTERVAL_STORE_NCLIST);
+    if (doTest(TEST_IS_NCLIST_0))
+      testQuery2(MODE_INTERVAL_STORE_NCLIST0);
+
+    if (doTest(TEST_IS_LINK_1))
+      testQuery2(MODE_INTERVAL_STORE_LINK);
+    if (doTest(TEST_IS_LINK_0))
+      testQuery2(MODE_INTERVAL_STORE_LINK0);
+
+    if (doTest(TEST_NCLIST_1))
+      testQuery2(MODE_NCLIST);
+    if (doTest(TEST_NCLIST_0))
+      testQuery2(MODE_NCLIST0);
+
+    if (doTest(TEST_NAIVE))
+      testQuery2(MODE_NAIVE);
+
+    System.out.println("# resultcounts " + Arrays.toString(resultcounts));
+
+  }
+
   public void testRemoveTime()
   {
 
@@ -750,6 +790,16 @@ public class ISLinkTimingTests
 
   private void testQuery(String mode)
   {
+    testQuery(mode, false);
+  }
+
+  private void testQuery2(String mode)
+  {
+    testQuery(mode, true);
+  }
+
+  private void testQuery(String mode, boolean addEncompassingInterval)
+  {
     intervalstore.impl0.IntervalStore<Range> store0 = null;
     intervalstore.impl.IntervalStore<Range> store1 = null;
     intervalstore.nonc.IntervalStore<Range> store2 = null;
@@ -757,15 +807,19 @@ public class ISLinkTimingTests
     intervalstore.impl0.NCList<Range> nclist0 = null;
     NCList<Range> nclist = null;
     List<Range> simple = null;
+    int window = QUERY_WINDOW;
 
-    System.out.println("# Query " + mode + " store interval size "
-            + QUERY_STORE_INTERVAL_SIZE + " store sequence factor "
-            + QUERY_STORE_SEQUENCE_SIZE_FACTOR + " query width "
-            + QUERY_WINDOW + " query count " + QUERY_COUNT);
+    System.out.println("# Query" + (addEncompassingInterval ? "2 " : " ")
+            + mode + " store interval size " + QUERY_STORE_INTERVAL_SIZE
+            + " store sequence factor " + QUERY_STORE_SEQUENCE_SIZE_FACTOR
+            + " query width " + QUERY_WINDOW + " query count "
+            + QUERY_COUNT);
 
     rand = new Random(RANDOM_SEED);
-    String testName = mode + " query";
+    String testName = mode + " query"
+            + (addEncompassingInterval ? "2 " : " ");
     boolean ok = true;
+
     for (int j = LOG_0; j <= MAX_LOGN; j++)
     {
       int count = (int) Math.pow(10, j / LOG_F);
@@ -778,12 +832,22 @@ public class ISLinkTimingTests
       double[] data = new double[REPEATS];
       List<Range> result = new ArrayList<>();
       int sequenceWidth = count * QUERY_STORE_SEQUENCE_SIZE_FACTOR;
+      if (window < 0 && -window > sequenceWidth / 2)
+      {
+        int w = -sequenceWidth / 5;
+        System.out.println("window " + window + " reduced to " + w);
+        window = w;
+      }
       for (int i = 0; i < REPEATS + WARMUPS; i++)
       {
         List<Range> ranges = generateIntervals(sequenceWidth, count,
                 QUERY_STORE_INTERVAL_SIZE);
+        if (addEncompassingInterval)
+        {
+          ranges.add(new Range(-1000000000, 1000000000));
+        }
         List<Range> queries = generateIntervals(sequenceWidth, QUERY_COUNT,
-                QUERY_WINDOW);
+                window);
         switch (mode)
         {
         case MODE_INTERVAL_STORE_NCLIST0:
@@ -886,41 +950,42 @@ public class ISLinkTimingTests
           assertEquals(ntotal, resultcounts[j]);
           assertEquals(hashcode, hashcodes[j]);
         }
-        // System.out.println("# results " + ntotal + " 0x"
-        // + Integer.toHexString(hashcode));
+        System.out.println("# results " + ntotal + " 0x"
+                + Integer.toHexString(hashcode));
       }
     }
 
     switch (mode)
     {
     case MODE_INTERVAL_STORE_NCLIST0:
-      System.out.println("# dimensions [" + store0.getDepth() + " "
-              + store0.getWidth() + "]");
+      System.out.println("# dimensions depth:" + store0.getDepth()
+              + " width:" + store0.getWidth() + "]");
 
       break;
     case MODE_INTERVAL_STORE_NCLIST:
-      System.out.println("# dimensions [" + store1.getDepth() + " "
-              + store1.getWidth() + "]");
+      System.out.println("# dimensions depth:" + store1.getDepth()
+              + " width:" + store1.getWidth() + "]");
 
       break;
     case MODE_INTERVAL_STORE_LINK:
-      System.out.println("# dimensions [" + store2.getDepth() + " "
-              + store2.getWidth() + "]");
+      System.out.println("# dimensions depth:" + store2.getDepth()
+              + " width:" + store2.getWidth() + "]");
       break;
     case MODE_INTERVAL_STORE_LINK0:
-      System.out.println("# dimensions [" + store3.getDepth() + " "
-              + store3.getWidth() + "]");
+      System.out.println("# dimensions depth:" + store3.getDepth()
+              + " width:" + store3.getWidth() + "]");
       break;
     case MODE_NCLIST:
-      System.out.println("# dimensions [" + nclist.getDepth() + " "
-              + nclist.getWidth() + "]");
+      System.out.println("# dimensions depth:" + nclist.getDepth()
+              + " width:" + nclist.getWidth() + "]");
       break;
     case MODE_NCLIST0:
-      System.out.println(
-              "# dimensions [" + nclist0.getDepth() + " " + "?" + "]");
+      System.out.println("# dimensions depth:" + nclist0.getDepth()
+              + " width:" + "?]");
       break;
     case MODE_NAIVE:
-      System.out.println("# dimensions [1 " + simple.size() + "]");
+      System.out
+              .println("# dimensions depth:1 width:" + simple.size() + "]");
       break;
     }
 

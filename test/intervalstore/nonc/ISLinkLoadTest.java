@@ -125,9 +125,9 @@ public class ISLinkLoadTest
           }
           String description = chr + ":" + desc;
           SimpleFeature sf = new SimpleFeature(from, to, description);
-
-          if (fs.size() > 700)
-            System.out.println(fs.size() + " " + sf);
+          //
+          // if (fs.size() > 700)
+          // System.out.println(fs.size() + " " + sf);
           fs.add(sf);
         }
         line = br.readLine();

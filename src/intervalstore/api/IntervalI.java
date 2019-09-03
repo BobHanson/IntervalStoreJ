@@ -40,6 +40,9 @@ public interface IntervalI
 
   /**
    * Compare intervals by start position ascending and end position descending.
+   * 
+   * BIGENDIAN sorts 10-100 ahead of 10-80 (original IntervalStoreJ method
+   * 
    */
   static Comparator<? super IntervalI> COMPARATOR_BIGENDIAN = new Comparator<IntervalI>()
   {
@@ -52,7 +55,10 @@ public interface IntervalI
   };
 
   /**
-   * Compare intervals by start position ascending and end position ascending.
+   * Compare intervals by start position ascending and end position descending.
+   * 
+   * LITTLEENDIAN sorts 10-100 after 10-80
+   * 
    */
   static Comparator<? super IntervalI> COMPARATOR_LITTLEENDIAN = new Comparator<IntervalI>()
   {
