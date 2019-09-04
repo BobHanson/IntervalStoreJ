@@ -91,6 +91,30 @@ public interface IntervalStoreI<T extends IntervalI> extends Collection<T>
    */
   boolean revalidate();
 
+  /**
+   * Get the i-th interval, whatever that means to this store.
+   * 
+   * @param i
+   * @return
+   */
   IntervalI get(int i);
+
+  /**
+   * Check to see if this store can check for duplicates while adding.
+   * 
+   * @return
+   */
+  boolean canCheckForDuplicates();
+
+  /**
+   * Add with a check for duplicates, if possible.
+   * 
+   * @param interval
+   * @param checkForDuplicate
+   * @return false only if addition was unsuccessful because there was an
+   *         identical interval already in the store or because the store cannot
+   *         check for duplicates
+   */
+  boolean add(T interval, boolean checkForDuplicate);
 
 }

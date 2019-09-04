@@ -92,7 +92,7 @@ import intervalstore.impl.Range;
  * 
  */
 // this is a long running test (several minutes) so normally left disabled
-@Test(enabled = true)
+@Test(enabled = false)
 public class ISLinkTimingTests
 {
 

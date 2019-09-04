@@ -86,13 +86,13 @@ public class SimpleFeature extends Range
 
   /**
    * Equals method that requires two instances to have the same description, as
-   * well as start and end position.
+   * well as start and end position. Does not do a test for null
    */
   @Override
   public boolean equalsInterval(IntervalI o)
   {
     // must override equalsInterval, not equals
-    return (this.start == ((SimpleFeature) o).start
+    return (o != null && start == ((SimpleFeature) o).start
             && end == ((SimpleFeature) o).end)
             && (description == null
                     ? ((SimpleFeature) o).description == null
