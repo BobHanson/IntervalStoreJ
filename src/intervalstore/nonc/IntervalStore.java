@@ -281,6 +281,7 @@ public class IntervalStore<T extends IntervalI>
    * @param interval
    * @param allowDuplicates
    */
+  @Override
   public boolean add(T interval, boolean allowDuplicates)
   {
     if (interval == null)
@@ -519,6 +520,12 @@ public class IntervalStore<T extends IntervalI>
       }
     }
     return -1 - start;
+  }
+
+  @Override
+  public boolean canCheckForDuplicates()
+  {
+    return true;
   }
 
   /**
@@ -1367,5 +1374,6 @@ public class IntervalStore<T extends IntervalI>
   {
     return prettyPrint();
   }
+
 
 }

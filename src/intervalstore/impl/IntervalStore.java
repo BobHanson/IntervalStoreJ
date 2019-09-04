@@ -540,4 +540,16 @@ public class IntervalStore<T extends IntervalI>
     // not supported (but could be)
     return null;
   }
+
+  @Override
+  public boolean canCheckForDuplicates()
+  {
+    return false;
+  }
+
+  @Override
+  public boolean add(T interval, boolean checkForDuplicate)
+  {
+    return add(interval);
+  }
 }

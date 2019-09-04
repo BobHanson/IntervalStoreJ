@@ -374,7 +374,8 @@ class NCNode<T extends IntervalI> implements IntervalI
   @Override
   public boolean equalsInterval(IntervalI i)
   {
-    return getBegin() == i.getBegin() && getEnd() == i.getEnd();
+    return i != null && getBegin() == i.getBegin()
+            && getEnd() == i.getEnd();
 
   }
 

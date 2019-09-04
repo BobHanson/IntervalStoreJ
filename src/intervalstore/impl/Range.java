@@ -88,7 +88,8 @@ public class Range implements IntervalI
   {
 
     // override equalsInterval, not equals
-    return (start == ((Range) obj).start && end == ((Range) obj).end);
+    return (obj != null && start == ((Range) obj).start
+            && end == ((Range) obj).end);
 
   }
 

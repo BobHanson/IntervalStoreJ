@@ -540,4 +540,18 @@ public class IntervalStore<T extends IntervalI>
     // TODO Auto-generated method stub
     return null;
   }
+
+  @Override
+  public boolean canCheckForDuplicates()
+  {
+    return false;
+  }
+
+  @Override
+  public boolean add(T interval, boolean checkForDuplicate)
+  {
+    add(interval);
+    return true;
+  }
+
 }
