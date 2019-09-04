@@ -30,15 +30,20 @@ import intervalstore.api.IntervalI;
 /**
  * A dual pivot quicksort for int[] where the int is a pointer to something for
  * which the value needs to be checked. This class is not used; it was just an
- * idea I was trying. But it is sort of cool, so I am keepting it in the
- * package.
+ * idea I was trying. But it is sort of cool, so I am keeping it in the package
+ * for possible future use.
  * 
  * Adapted from Java 7 java.util.DualPivotQuicksort -- int[] only. The only
  * difference is that wherever an a[] value is compared, we use val(a[i])
  * instead of a[i] itself. Pretty straightforward. Could be adapted for general
  * use. Why didn't they do this in Java?
  * 
+ * val(i) is just a hack here, of course. A more general implementation might
+ * use a Function call.
  * 
+ * Just thought it was cool that you can do this.
+ * 
+ * @author Bob Hanson 2019.09.02
  * 
  */
 
@@ -122,13 +127,15 @@ class IntervalEndSorter
     // Check if the array is nearly sorted
     for (int k = left; k < right; run[count] = k)
     {
-      if (val(a[k]) < val(a[k + 1]))
-      { // ascending
+      switch (Integer.signum(val(a[k + 1]) - val(a[k])))
+      {
+      case 1:
+        // ascending
         while (++k <= right && val(a[k - 1]) <= val(a[k]))
           ;
-      }
-      else if (val(a[k]) > val(a[k + 1]))
-      { // descending
+        break;
+      case -1:
+        // descending
         while (++k <= right && val(a[k - 1]) >= val(a[k]))
           ;
         for (int lo = run[count] - 1, hi = k; ++lo < --hi;)
@@ -137,10 +144,11 @@ class IntervalEndSorter
           a[lo] = a[hi];
           a[hi] = t;
         }
-      }
-      else
-      { // equal
-        for (int m = MAX_RUN_LENGTH; ++k <= right && a[k - 1] == a[k];)
+        break;
+      default:
+        // equal
+        for (int m = MAX_RUN_LENGTH; ++k <= right
+                && val(a[k - 1]) == val(a[k]);)
         {
           if (--m == 0)
           {
