@@ -93,7 +93,7 @@ public class IntervalStore<T extends IntervalI>
    *          the ending point for the subarray search
    * @return index into the nests array or one greater than end if not found
    */
-  public static int binarySearchFirstEndWithin(IntervalI[] nests, long from,
+  public static int binarySearchFirstEndNotBefore(IntervalI[] nests, long from,
           int start, int end)
   {
     int matched = end + 1;
@@ -171,7 +171,6 @@ public class IntervalStore<T extends IntervalI>
    * 
    */
   private int[] nestCounts;
-
 
   public IntervalStore()
   {
@@ -602,7 +601,9 @@ public class IntervalStore<T extends IntervalI>
         sort();
       }
       if (intervalCount > 0)
+      {
         createArrays();
+      }
       isTainted = false;
     }
   }
@@ -653,20 +654,19 @@ public class IntervalStore<T extends IntervalI>
     {
       return result;
     }
+    int root = 0;
     if (createUnnested)
     {
       if (nestCounts[0] > 0)
-        searchNonnested(nestStarts, nestCounts, nests, from, to,
+      {
+        searchNonnested(nestCounts[0], nests, from, to,
                 (List<IntervalI>) result);
-      if (createUnnested && nestCounts[1] > 0)
-        search(nests, from, to, 1, result);
+      }
+      root = 1;
     }
-    else
+    if (nestCounts[root] > 0)
     {
-      if (nestCounts[0] > 0)
-        search(nests, from, to, 0, result);
-      if (createUnnested && nestCounts[1] > 0)
-        search(nests, from, to, 1, result);
+      search(nests, from, to, root, result);
     }
     return result;
   }
@@ -682,19 +682,18 @@ public class IntervalStore<T extends IntervalI>
    * @param to
    * @param result
    */
-  private static void searchNonnested(int[] nestStarts, int[] nestCounts,
-          IntervalI[] nests, long from, long to,
-          List<IntervalI> result)
+  private static void searchNonnested(int n,
+          IntervalI[] nests, long from, long to, List<IntervalI> result)
   {
-    int start = nestStarts[0];
-    int n = nestCounts[0];
-    int end = start + n - 1;
-    for (int few = binarySearchFirstEndWithin(nests, from, start,
-            end); few <= end; few++)
+    int end = 2 + n - 1;
+    for (int pt = binarySearchFirstEndNotBefore(nests, from, 2,
+            end); pt <= end; pt++)
     {
-      IntervalI ival = nests[few];
+      IntervalI ival = nests[pt];
       if (ival.getBegin() > to)
+      {
         break;
+      }
       result.add(ival);
     }
   }
@@ -718,32 +717,51 @@ public class IntervalStore<T extends IntervalI>
     IntervalI first = nests[start];
     IntervalI last = nests[end];
 
+    // quick tests for common cases:
+    // out of range
     if (last.getEnd() < from || first.getBegin() > to)
+    {
       return;
-    int few;
+    }
+    int pt;
     switch (n)
     {
     case 1:
-      few = start;
+      // just one interval and hasn't failed begin/end test
+      pt = start;
       break;
     case 2:
-      few = (first.getEnd() >= from ? start : end);
+      // just two and didn't fail begin/end test
+      // so there is only one option: either the first or the second is our
+      // winner
+      pt = (first.getEnd() >= from ? start : end);
       break;
     default:
-      few = binarySearchFirstEndWithin(nests, from, start, end);
+      // do the binary search
+      pt = binarySearchFirstEndNotBefore(nests, from, start, end);
       break;
     }
-    for (; few <= end; few++)
+    for (; pt <= end; pt++)
     {
-      IntervalI ival = nests[few];
+      IntervalI ival = nests[pt];
+      // check for out of range
       if (ival.getBegin() > to)
+      {
         break;
+      }
       result.add((T) ival);
-      if (nestCounts[few] > 0)
-        search(nests, from, to, few, result);
+      if (nestCounts[pt] > 0)
+      {
+        // check subintervals in this nest
+        search(nests, from, to, pt, result);
+      }
     }
   }
 
+  /**
+   * return the i-th interval in the designated order (bigendian or
+   * littleendian)
+   */
   @Override
   public IntervalI get(int i)
   {
@@ -781,7 +799,9 @@ public class IntervalStore<T extends IntervalI>
     int depth;
     int n = nestCounts[pt];
     if (n == 0 || bsTested.get(pt))
+    {
       return 1;
+    }
     bsTested.set(pt);
     for (int st = nestStarts[pt], i = st + n; --i >= st;)
     {
@@ -887,7 +907,8 @@ public class IntervalStore<T extends IntervalI>
     for (int i = 0; i < n; i++)
     {
       sb.append(sep).append(nests[pt + i].toString());
-      dump(pt + i, sb, sep + "  ");
+      if (nestCounts[pt + i] > 0)
+        dump(pt + i, sb, sep + "  ");
     }
   }
 
@@ -1196,11 +1217,12 @@ public class IntervalStore<T extends IntervalI>
           // top-level nests get -2.
 
           pt = ptLastNot2;
-          isNested = (pt < 0
-                  || isNested(begin, end, intervals[pt].getBegin(),
-                  intervals[pt].getEnd()));
+          isNested = (pt < 0 || isNested(begin, end,
+                  intervals[pt].getBegin(), intervals[pt].getEnd()));
           if (!isNested)
+          {
             myContainer[i] = -1;
+          }
         }
       }
       else
@@ -1252,25 +1274,32 @@ public class IntervalStore<T extends IntervalI>
     // starting pointer array and nest element counts. These counts
     // are actually produced above, but we reconstruct it as a set
     // of dynamic pointers during construction.
+    
+    // incr is either 1 (no separate unnested set) or 2 (include unnested)
 
-    int nextStart = incr + counts[0];
-    int[] temp = new int[intervalCount + incr];
+    int nextStart = counts[0] + incr;
+    /**
+     * this array tracks the pointer within nestStarts to the nest block start
+     * in nests[].
+     */
+    int[] startPt = new int[intervalCount + incr];
+    nestStarts[0] = incr;
+    
+    // When not unnesting, nestStarts[0] = 1, and the length
+    // will start out here as 0 but increment as we go.
+    // We do this even though we know its size already, because that
+    // value serves as a dynamic pointer as well.
+
     if (createUnnested)
     {
 
       // Unnesting requires two separate lists with proper pointers and counts.
+      // The first, nestStarts[0] = 0, is for the unnested set (container -2);
+      // the second (container -1, nestStarts[1]) is for the nest root.
 
-      nestStarts[0] = 2;
-      nestStarts[temp[1] = 1] = nextStart;
+      startPt[1] = 1;
+      nestStarts[1] = nextStart;
       nextStart += counts[1];
-    }
-    else
-    {
-      // When not unnesting, nestStarts points to element 1, and the length
-      // will start out here as 0 but increment as we go. We do know its size
-      // already.
-
-      nestStarts[0] = 1;
     }
 
     // Now get all the pointers right and set the nests[] pointer into intervals
@@ -1279,12 +1308,12 @@ public class IntervalStore<T extends IntervalI>
     for (int i = 0; i < intervalCount; i++)
     {
       int n = counts[i + incr];
-      int ptNest = temp[myContainer[i] + incr];
+      int ptNest = startPt[myContainer[i] + incr];
       int p = nestStarts[ptNest] + nestCounts[ptNest]++;
       nests[p] = intervals[i];
       if (n > 0)
       {
-        temp[i + incr] = p;
+        startPt[i + incr] = p;
         nestStarts[p] = nextStart;
         nextStart += n;
       }

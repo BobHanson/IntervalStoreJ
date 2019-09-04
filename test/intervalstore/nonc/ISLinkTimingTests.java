@@ -88,11 +88,32 @@ import intervalstore.impl.Range;
  * 
  * 
  * @author gmcarstairs
+ * @author Bob Hanson 2019.09.04
+ * 
  */
 // this is a long running test (several minutes) so normally left disabled
 @Test(enabled = true)
 public class ISLinkTimingTests
 {
+
+  // BH test -- query (no encompassing interval)
+  // Java version: 1.8.0_191
+  // amd64 Windows 10 10.0 cores:4
+  // 4 Sep 2019 14:32:40 GMT
+  // IntStoreLink0 query 1000000 10 241.5 414.2 1.05 1.80
+  // IntStoreLink query 1000000 10 303.3 329.8 1.37 1.49
+  // IntStoreNCList query 1000000 10 351.3 284.7 1.34 1.08
+  // IntStoreNCList0 query 1000000 10 397.6 251.5 1.02 0.64
+  // NCList-Java query 1000000 10 467.7 213.9 2.10 0.96
+  // NCList0-Java query 1000000 10 476.2 210.2 5.14 2.26
+
+  // BH test -- query (includes an encompassing interval)
+  // IntStoreLink0 query2 1000000 10 251.4 397.8 1.09 1.74
+  // IntStoreLink query2 1000000 10 332.3 301.0 1.34 1.21
+  // IntStoreNCList query2 1000000 10 452.9 220.8 1.42 0.69
+  // NCList-Java query2 1000000 10 464.8 215.2 1.10 0.51
+  // IntStoreNCList0 query2 1000000 10 486.1 205.8 2.21 0.93
+  // NCList0-Java query2 1000000 10 486.6 205.6 3.05 1.27
 
   private int TEST_EVERYTHING = 0xFFFFFF;
 
@@ -110,7 +131,7 @@ public class ISLinkTimingTests
 
   private int TEST_INCR = TEST_INCR_DUP | TEST_INCR_NODUP;
 
-  private int testMode = TEST_QUERY | TEST_1 | TEST_0;// TEST_REMOVE |
+  private int testMode = TEST_QUERY2 | TEST_1 | TEST_0;// TEST_REMOVE |
                                                              // TEST_1;
 
   private boolean doTest(int mode)
@@ -213,7 +234,7 @@ public class ISLinkTimingTests
    * 
    * 10 starts at 2K; 18 starts at 1M
    */
-  private static final int LOG_0 = 10;
+  private static final int LOG_0 = 18;
 
   /**
    * final value for loop [LOG_0, MAX_LOG] inclusive
@@ -523,20 +544,18 @@ public class ISLinkTimingTests
     if (!doTest(TEST_QUERY))
       return;
 
-    if (doTest(TEST_IS_NCLIST_1))
-      testQuery(MODE_INTERVAL_STORE_NCLIST);
-    if (doTest(TEST_IS_NCLIST_0))
-      testQuery(MODE_INTERVAL_STORE_NCLIST0);
-
-    if (doTest(TEST_IS_LINK_1))
-      testQuery(MODE_INTERVAL_STORE_LINK);
     if (doTest(TEST_IS_LINK_0))
       testQuery(MODE_INTERVAL_STORE_LINK0);
-
-    if (doTest(TEST_NCLIST_1))
-      testQuery(MODE_NCLIST);
+    if (doTest(TEST_IS_LINK_1))
+      testQuery(MODE_INTERVAL_STORE_LINK);
+    if (doTest(TEST_IS_NCLIST_0))
+      testQuery(MODE_INTERVAL_STORE_NCLIST0);
+    if (doTest(TEST_IS_NCLIST_1))
+      testQuery(MODE_INTERVAL_STORE_NCLIST);
     if (doTest(TEST_NCLIST_0))
       testQuery(MODE_NCLIST0);
+    if (doTest(TEST_NCLIST_1))
+      testQuery(MODE_NCLIST);
 
     if (doTest(TEST_NAIVE))
       testQuery(MODE_NAIVE);
@@ -551,20 +570,18 @@ public class ISLinkTimingTests
     if (!doTest(TEST_QUERY2))
       return;
 
-    if (doTest(TEST_IS_NCLIST_1))
-      testQuery2(MODE_INTERVAL_STORE_NCLIST);
-    if (doTest(TEST_IS_NCLIST_0))
-      testQuery2(MODE_INTERVAL_STORE_NCLIST0);
-
-    if (doTest(TEST_IS_LINK_1))
-      testQuery2(MODE_INTERVAL_STORE_LINK);
     if (doTest(TEST_IS_LINK_0))
       testQuery2(MODE_INTERVAL_STORE_LINK0);
-
-    if (doTest(TEST_NCLIST_1))
-      testQuery2(MODE_NCLIST);
+    if (doTest(TEST_IS_LINK_1))
+      testQuery2(MODE_INTERVAL_STORE_LINK);
+    if (doTest(TEST_IS_NCLIST_0))
+      testQuery2(MODE_INTERVAL_STORE_NCLIST0);
+    if (doTest(TEST_IS_NCLIST_1))
+      testQuery2(MODE_INTERVAL_STORE_NCLIST);
     if (doTest(TEST_NCLIST_0))
       testQuery2(MODE_NCLIST0);
+    if (doTest(TEST_NCLIST_1))
+      testQuery2(MODE_NCLIST);
 
     if (doTest(TEST_NAIVE))
       testQuery2(MODE_NAIVE);
