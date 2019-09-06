@@ -749,4 +749,9 @@ public class NCList<T extends IntervalI> extends AbstractCollection<T>
     subranges.clear();
     size = 0;
   }
+
+  public int getWidth()
+  {
+    return subranges.size();
+  }
 }

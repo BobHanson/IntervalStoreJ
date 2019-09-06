@@ -516,8 +516,8 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public int getWidth()
   {
-    // TODO Auto-generated method stub
-    return 0;
+    return (nonNested == null ? 0 : nonNested.size())
+            + (nested == null ? 0 : nested.getWidth());
   }
 
   @Override

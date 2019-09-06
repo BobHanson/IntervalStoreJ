@@ -92,7 +92,7 @@ import intervalstore.impl.Range;
  * 
  */
 // this is a long running test (several minutes) so normally left disabled
-@Test(enabled = false)
+@Test(enabled = true)
 public class ISLinkTimingTests
 {
 
@@ -131,7 +131,9 @@ public class ISLinkTimingTests
 
   private int TEST_INCR = TEST_INCR_DUP | TEST_INCR_NODUP;
 
-  private int testMode = TEST_QUERY2 | TEST_1 | TEST_0;// TEST_REMOVE |
+  private int testMode = TEST_QUERY2 | TEST_ALL_CODE;// TEST_QUERY2 | TEST_1 |
+                                                     // TEST_0;//
+                                         // TEST_REMOVE |
                                                              // TEST_1;
 
   private boolean doTest(int mode)
@@ -188,7 +190,7 @@ public class ISLinkTimingTests
   /**
    * maximum number of seconds per log cycle to wait before bailing out
    */
-  private static final double MAX_SEC = 5.0;
+  private static final double MAX_SEC = 0.5;
 
   /**
    * factor to multiply first parameter of generateIntervals(sequenceWidth,
@@ -234,7 +236,7 @@ public class ISLinkTimingTests
    * 
    * 10 starts at 2K; 18 starts at 1M
    */
-  private static final int LOG_0 = 18;
+  private static final int LOG_0 = 10;
 
   /**
    * final value for loop [LOG_0, MAX_LOG] inclusive
@@ -322,7 +324,10 @@ public class ISLinkTimingTests
   {
     ISLinkTimingTests test = new ISLinkTimingTests();
     test.setUp();
-    test.testQueryTime();
+    if (test.doTest(TEST_QUERY2))
+      test.testQueryTime2();
+    else
+      test.testQueryTime();
     test.tearDown();
 
   }
@@ -509,9 +514,9 @@ public class ISLinkTimingTests
       testIncrLoad(MODE_NAIVE, true);
   }
 
-  private int[] hashcodes = new int[MAX_LOGN + 1];
+  private int[] hashcodes;
 
-  private int[] resultcounts = new int[MAX_LOGN + 1];
+  private int[] resultcounts;
 
   public void testLoadTimeIncrementalNoDuplicates()
   {
@@ -543,15 +548,18 @@ public class ISLinkTimingTests
 
     if (!doTest(TEST_QUERY))
       return;
-
-    if (doTest(TEST_IS_LINK_0))
-      testQuery(MODE_INTERVAL_STORE_LINK0);
-    if (doTest(TEST_IS_LINK_1))
-      testQuery(MODE_INTERVAL_STORE_LINK);
-    if (doTest(TEST_IS_NCLIST_0))
-      testQuery(MODE_INTERVAL_STORE_NCLIST0);
+    hashcodes = new int[MAX_LOGN + 1];
+    resultcounts = new int[MAX_LOGN + 1];
     if (doTest(TEST_IS_NCLIST_1))
       testQuery(MODE_INTERVAL_STORE_NCLIST);
+    if (doTest(TEST_IS_NCLIST_0))
+      testQuery(MODE_INTERVAL_STORE_NCLIST0);
+
+    if (doTest(TEST_IS_LINK_1))
+      testQuery(MODE_INTERVAL_STORE_LINK);
+    if (doTest(TEST_IS_LINK_0))
+      testQuery(MODE_INTERVAL_STORE_LINK0);
+
     if (doTest(TEST_NCLIST_0))
       testQuery(MODE_NCLIST0);
     if (doTest(TEST_NCLIST_1))
@@ -569,13 +577,18 @@ public class ISLinkTimingTests
 
     if (!doTest(TEST_QUERY2))
       return;
-
-    if (doTest(TEST_IS_LINK_0))
-      testQuery2(MODE_INTERVAL_STORE_LINK0);
-    if (doTest(TEST_IS_LINK_1))
-      testQuery2(MODE_INTERVAL_STORE_LINK);
+    hashcodes = new int[MAX_LOGN + 1];
+    resultcounts = new int[MAX_LOGN + 1];
+    if (doTest(TEST_IS_NCLIST_1))
+      testQuery2(MODE_INTERVAL_STORE_NCLIST);
     if (doTest(TEST_IS_NCLIST_0))
       testQuery2(MODE_INTERVAL_STORE_NCLIST0);
+
+    if (doTest(TEST_IS_LINK_1))
+      testQuery2(MODE_INTERVAL_STORE_LINK);
+    if (doTest(TEST_IS_LINK_0))
+      testQuery2(MODE_INTERVAL_STORE_LINK0);
+
     if (doTest(TEST_IS_NCLIST_1))
       testQuery2(MODE_INTERVAL_STORE_NCLIST);
     if (doTest(TEST_NCLIST_0))
@@ -998,7 +1011,7 @@ public class ISLinkTimingTests
       break;
     case MODE_NCLIST0:
       System.out.println("# dimensions depth:" + nclist0.getDepth()
-              + " width:" + "?]");
+              + " width:" + nclist0.getWidth() + "]");
       break;
     case MODE_NAIVE:
       System.out
