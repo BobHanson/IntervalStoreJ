@@ -518,7 +518,7 @@ public class IntervalStore<T extends IntervalI>
   public int getWidth()
   {
     return (nonNested == null ? 0 : nonNested.size())
-            + (nested == null ? 0 : nested.size());
+            + (nested == null ? 0 : nested.getWidth());
   }
 
   @Override
