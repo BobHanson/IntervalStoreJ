@@ -1057,7 +1057,7 @@ public class IntervalStore0<T extends IntervalI>
    * @param i2
    * @return
    */
-  boolean sameInterval(IntervalI i1, IntervalI i2)
+  protected boolean sameInterval(IntervalI i1, IntervalI i2)
   {
     return i1.equalsInterval(i2);
   }

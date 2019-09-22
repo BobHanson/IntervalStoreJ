@@ -128,7 +128,7 @@ public class IntervalStore<T extends IntervalI>
   //
   // private boolean isSorted;
   //
-  private boolean createUnnested = true;
+  private boolean createUnnested = false;
 
   private int minStart = Integer.MAX_VALUE, maxStart = Integer.MIN_VALUE,
           maxEnd = Integer.MAX_VALUE;
@@ -1127,7 +1127,7 @@ public class IntervalStore<T extends IntervalI>
      */
     int len = intervalCount + (createUnnested ? 2 : 1);
     root = intervalCount;
-    unnested = intervalCount + 1;
+    unnested = (createUnnested ? intervalCount + 1 : 0);
 
     /**
      * The three key arrays produced by this method:
@@ -1270,7 +1270,7 @@ public class IntervalStore<T extends IntervalI>
 
     int nextStart = counts[root];
     
-    if (unnested > 0)
+    if (createUnnested)
     {
       nestOffsets[root] = counts[unnested];
       nextStart += counts[unnested];
@@ -1358,7 +1358,7 @@ public class IntervalStore<T extends IntervalI>
    * @param i2
    * @return
    */
-  boolean sameInterval(IntervalI i1, IntervalI i2)
+  protected boolean sameInterval(IntervalI i1, IntervalI i2)
   {
     return i1.equalsInterval(i2);
   }
