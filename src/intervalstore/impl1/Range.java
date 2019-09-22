@@ -29,66 +29,79 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package intervalstore.nonc;
+package intervalstore.impl1;
 
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertSame;
-import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.fail;
+import intervalstore.api.IntervalI;
 
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-
-import org.testng.annotations.Test;
-
-import intervalstore.impl1.Range;
-
-public class ISLinkIntervalIteratorTest
+/**
+ * An immutable data bean that models a start-end range
+ */
+public class Range implements IntervalI
 {
-  @Test(groups = "Functional")
-  public void testNext()
+
+  // no need for final here; these can be fully mutable as long as
+  // store.revalidate() is run afterwords
+
+  public int start;
+
+  public int end;
+
+
+  @Override
+  public int getBegin()
   {
-    IntervalStore<Range> store = new IntervalStore<>();
-
-    Iterator<Range> it = store.iterator();
-    assertFalse(it.hasNext());
-    try
-    {
-      it.next();
-      fail("expected exception");
-    } catch (NoSuchElementException e)
-    {
-      // expected
-    }
-
-    Range range1 = new Range(11, 20);
-    store.add(range1);
-    it = store.iterator();
-    assertTrue(it.hasNext());
-    assertSame(range1, it.next());
-    assertFalse(it.hasNext());
-
-    Range range2 = new Range(4, 8);
-    store.add(range2);
-    Range range3 = new Range(40, 60);
-    store.add(range3);
-    it = store.iterator();
-    assertSame(range2, it.next());
-    assertSame(range1, it.next());
-    assertSame(range3, it.next());
-    assertFalse(it.hasNext());
-
-    /*
-     * add nested intervals
-     */
-    store.clear();
-    store.add(range1);
-    Range range4 = new Range(15, 18);
-    store.add(range4);
-    it = store.iterator();
-    assertTrue(it.hasNext());
-    assertSame(range1, it.next());
-    assertSame(range4, it.next());
-    assertFalse(it.hasNext());
+    return start;
   }
+
+  @Override
+  public int getEnd()
+  {
+    return end;
+  }
+
+  public Range(int i, int j)
+  {
+    start = i;
+    end = j;
+  }
+
+  @Override
+  public String toString()
+  {
+    return String.valueOf(start) + "-" + String.valueOf(end);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return start * 31 + end;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    return (o != null && o instanceof Range && equalsInterval((Range) o));
+  }
+
+  @Override
+  public boolean equalsInterval(IntervalI obj)
+  {
+
+    // override equalsInterval, not equals
+    return (obj != null && start == ((Range) obj).start
+            && end == ((Range) obj).end);
+
+  }
+
+  public void setStart(int pos)
+  {
+    start = pos;
+  }
+
+  public void setEnd(int pos)
+  {
+    end = pos;
+  }
+
+
 }

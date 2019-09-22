@@ -29,7 +29,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package intervalstore.nonc;
+package intervalstore.impl1;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -45,10 +45,9 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import intervalstore.api.IntervalI;
-import intervalstore.impl1.SimpleFeature;
 
 /**
- * Does a number of pseudo-random (reproducible) tests of an NoNCList, to exercise
+ * Does a number of pseudo-random (reproducible) tests of an NCList, to exercise
  * as many methods of the class as possible while generating the range of
  * possible structure topologies
  * <ul>
@@ -60,7 +59,7 @@ import intervalstore.impl1.SimpleFeature;
  * each deletion</li>
  * </ul>
  */
-public class ISLinkRandomisedTest
+public class NCListRandomisedTest
 {
   /*
    * use a fixed random seed for reproducible test behaviour
@@ -70,7 +69,7 @@ public class ISLinkRandomisedTest
   private Comparator<? super IntervalI> sorter = IntervalI.COMPARATOR_BIGENDIAN;
 
   /**
-   * Provides the scales for pseudo-random NoNCLists i.e. the range of the maximal
+   * Provides the scales for pseudo-random NCLists i.e. the range of the maximal
    * [0-scale] interval to be stored
    * 
    * @return
@@ -84,8 +83,9 @@ public class ISLinkRandomisedTest
   @Test(groups = "Functional", dataProvider = "scalesOfLife")
   public void test_pseudoRandom(Integer scale)
   {
-    IntervalStore<SimpleFeature> ncl = new IntervalStore<>();
-    List<SimpleFeature> features = new ArrayList<>(scale);
+    NCList<SimpleFeature> ncl = new NCList<>();
+    List<SimpleFeature> features = new ArrayList<>(
+            scale);
 
     testAdd_pseudoRandom(scale, ncl, features);
 
@@ -101,50 +101,44 @@ public class ISLinkRandomisedTest
   }
 
   /**
-   * Pick randomly selected entries to delete in turn, checking the NoNCList size
+   * Pick randomly selected entries to delete in turn, checking the NCList size
    * and validity at each stage, until it is empty
    * 
    * @param ncl
    * @param features
    */
-  protected void testDelete_pseudoRandom(IntervalStore<SimpleFeature> ncl,
+  protected void testDelete_pseudoRandom(NCList<SimpleFeature> ncl,
           List<SimpleFeature> features)
   {
     int deleted = 0;
 
     while (!features.isEmpty())
     {
-
       assertEquals(ncl.size(), features.size());
       int toDelete = random.nextInt(features.size());
       SimpleFeature entry = features.get(toDelete);
       assertTrue(ncl.contains(entry),
-              String.format("NoNCList doesn't contain entry [%d] '%s'!",
+              String.format("NCList doesn't contain entry [%d] '%s'!",
                       deleted, entry.toString()));
 
+      String pp = ncl.prettyPrint();
       ncl.remove(entry);
-      if (ncl.contains(entry))
-      {
-        ncl.remove(entry);
-        ncl.contains(entry);
-        System.out.println("problem with equals() or equalsInterval()");
-      }
       assertFalse(ncl.contains(entry),
               String.format(
-                      "NoNCList still contains deleted entry [%d] '%s'!",
+                      "NCList still contains deleted entry [%d] '%s'!",
                       deleted, entry.toString()));
       features.remove(toDelete);
       deleted++;
 
-      // boolean valid = ncl.isValid();
-      // if (!valid)
-      // {
-      // System.err.println(String.format("Before\n%s\nAfter\n%s\n", pp,
-      // ncl.prettyPrint()));
-      // }
-      // assertTrue(valid, String.format(
-      // "NoNCList invalid after %d deletions, last deleted was '%s'",
-      // deleted, entry.toString()));
+      boolean valid = ncl.isValid();
+      if (!valid)
+      {
+        System.err.println(String.format("Before\n%s\nAfter\n%s\n", pp,
+                ncl.prettyPrint()));
+      }
+      assertTrue(valid, String.format(
+              "NCList invalid after %d deletions, last deleted was '%s'",
+              deleted, entry.toString()));
 
       /*
        * brute force check that deleting one entry didn't delete any others
@@ -153,7 +147,7 @@ public class ISLinkRandomisedTest
       {
         SimpleFeature sf = features.get(i);
         assertTrue(ncl.contains(sf), String.format(
-                "NoNCList doesn't contain entry [%d] '%s' after deleting '%s'!",
+                "NCList doesn't contain entry [%d] '%s' after deleting '%s'!",
                 i, sf.toString(), entry.toString()));
       }
     }
@@ -161,7 +155,7 @@ public class ISLinkRandomisedTest
   }
 
   /**
-   * Randomly generate entries and add them to the NoNCList, checking its validity
+   * Randomly generate entries and add them to the NCList, checking its validity
    * and size at each stage. A few entries should be duplicates (by equals test)
    * so not get added.
    * 
@@ -170,10 +164,10 @@ public class ISLinkRandomisedTest
    * @param features
    */
   protected void testAdd_pseudoRandom(Integer scale,
-          IntervalStore<SimpleFeature> ncl, List<SimpleFeature> features)
+          NCList<SimpleFeature> ncl, List<SimpleFeature> features)
   {
     int count = 0;
-    final int size = 3000;
+    final int size = 50;
 
     for (int i = 0; i < size; i++)
     {
@@ -190,41 +184,26 @@ public class ISLinkRandomisedTest
       SimpleFeature feature = new SimpleFeature(from, to, desc);
 
       /*
-       * add to NoNCList - with duplicate entries (by equals) disallowed
+       * add to NCList - with duplicate entries (by equals) disallowed
        */
       if (features.contains(feature))
       {
-        if (!ncl.contains(feature))
-          System.out.println("???");
         assertTrue(ncl.contains(feature));
         System.out.println(
                 "Duplicate feature generated " + feature.toString());
       }
       else
       {
-        if (ncl.contains(feature))
-          System.out.println(
-                  "feature is not correctly overriding Object.equals");
-        assertFalse(ncl.contains(feature));
-        if (from == 2 && to == 5)
-          System.out.println("???????" + feature);
         ncl.add(feature);
-        if (!ncl.contains(feature))
-        {
-          System.out.println(ncl.contains(feature));
-        }
         features.add(feature);
         count++;
-        if (ncl.size() != count)
-          System.out.println("???");
       }
 
       /*
        * check list format is valid at each stage of its construction
        */
-      // assertTrue(ncl.isValid(),
-      // String.format("Failed for scale = %d, i=%d", scale, i));
-
+      assertTrue(ncl.isValid(),
+              String.format("Failed for scale = %d, i=%d", scale, i));
       assertEquals(ncl.size(), count);
     }
     // System.out.println(ncl.prettyPrint());
@@ -235,14 +214,13 @@ public class ISLinkRandomisedTest
    * findOverlaps returns the correct matches
    * 
    * @param ncl
-   *          the NoNCList to query
+   *          the NCList to query
    * @param scale
    *          ncl maximal range is [0, scale]
    * @param features
    *          a list of the ranges stored in ncl
    */
-  protected void testFindOverlaps_pseudoRandom(
-          IntervalStore<SimpleFeature> ncl,
+  protected void testFindOverlaps_pseudoRandom(NCList<SimpleFeature> ncl,
           int scale, List<SimpleFeature> features)
   {
     int halfScale = scale / 2;
@@ -304,15 +282,14 @@ public class ISLinkRandomisedTest
 
   /**
    * A helper method that verifies that overlaps found by interrogating an
-   * NoNCList correctly match those found by brute force search
+   * NCList correctly match those found by brute force search
    * 
    * @param ncl
    * @param from
    * @param to
    * @param features
    */
-  protected void verifyFindOverlaps(IntervalStore<SimpleFeature> ncl,
-          int from,
+  protected void verifyFindOverlaps(NCList<SimpleFeature> ncl, int from,
           int to, List<SimpleFeature> features)
   {
     List<SimpleFeature> overlaps = ncl.findOverlaps(from, to);
@@ -324,11 +301,6 @@ public class ISLinkRandomisedTest
     {
       int begin = sf.getBegin();
       int end = sf.getEnd();
-      if (begin > to || end < from)
-      {
-        overlaps = ncl.findOverlaps(from, to);
-        System.out.println("???");
-      }
       assertTrue(begin <= to && end >= from,
               String.format(
                       "[%d, %d] does not overlap query range [%d, %d]",
@@ -346,16 +318,6 @@ public class ISLinkRandomisedTest
       if (begin <= to && end >= from)
       {
         boolean found = overlaps.contains(sf);
-        if (!found)
-        {
-          // stop here in debug mode to test again
-          System.out.println(ncl.prettyPrint());
-          System.out
-                  .println("find " + from + " " + to + " not found: " + sf);
-          ncl.revalidate();
-          ncl.findOverlaps(from, to);
-          System.out.println(overlaps.contains(sf));
-        }
         assertTrue(found,
                 String.format("[%d, %d] missing in query range [%d, %d]",
                         begin, end, from, to));

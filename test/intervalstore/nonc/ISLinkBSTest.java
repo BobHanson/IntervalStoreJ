@@ -41,7 +41,7 @@ import java.util.Random;
 
 import org.testng.annotations.Test;
 
-import intervalstore.impl.Range;
+import intervalstore.impl1.Range;
 
 public class ISLinkBSTest
 {
