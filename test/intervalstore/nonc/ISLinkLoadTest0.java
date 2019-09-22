@@ -46,7 +46,7 @@ import java.util.zip.ZipInputStream;
 
 import org.testng.annotations.Test;
 
-import intervalstore.impl1.SimpleFeature;
+import intervalstore.nonc.SimpleFeature;
 import junit.extensions.PA;
 
 /**

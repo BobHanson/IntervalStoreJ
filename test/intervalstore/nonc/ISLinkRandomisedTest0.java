@@ -45,7 +45,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import intervalstore.api.IntervalI;
-import intervalstore.impl1.SimpleFeature;
 
 /**
  * Does a number of pseudo-random (reproducible) tests of an NoNCList, to exercise
@@ -188,8 +187,8 @@ public class ISLinkRandomisedTest0
        */
       if (features.contains(feature))
       {
-        // if (!ncl.contains(feature))
-        // System.out.println("???");
+        if (!ncl.contains(feature))
+          System.out.println("???");
         assertTrue(ncl.contains(feature));
         System.out.println(
                 "Duplicate feature generated " + feature.toString());

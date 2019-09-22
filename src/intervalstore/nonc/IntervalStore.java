@@ -124,11 +124,11 @@ public class IntervalStore<T extends IntervalI>
    */
   private boolean bigendian;
 
-  private final boolean DO_PRESORT;
-
-  private boolean isSorted;
-
-  private boolean createUnnested = true;
+  // private final boolean DO_PRESORT;
+  //
+  // private boolean isSorted;
+  //
+  private boolean createUnnested = false;
 
   private int minStart = Integer.MAX_VALUE, maxStart = Integer.MIN_VALUE,
           maxEnd = Integer.MAX_VALUE;
@@ -184,55 +184,41 @@ public class IntervalStore<T extends IntervalI>
 
   public IntervalStore()
   {
-    this(true);
+    this(null);
   }
 
-  public IntervalStore(boolean presort)
-  {
-    this(null, presort);
-  }
-
+  // public IntervalStore(boolean presort)
+  // {
+  // this(null, presort);
+  // }
+  //
   /**
    * Constructor given a list of intervals. Note that the list may get sorted as
    * a side-effect of calling this constructor.
    */
   public IntervalStore(List<T> intervals)
   {
-    this(intervals, true);
-  }
-
-  /**
-   * Allows a presort option, which can speed up initial loading of individual
-   * features but will delay the first findOverlap if set to true.
-   * 
-   * @param intervals
-   * @param presort
-   */
-  public IntervalStore(List<T> intervals, boolean presort)
-  {
-    // setting default to BIG_ENDIAN, meaning
-    // the order will be [10,100] before [10,80]
-    // this order doesn't really matter much.
-    this(intervals, presort, null, true);
+    this(intervals, null, true);
   }
 
   /**
    * 
    * @param intervals
    *          intervals to initialize with (others may still be added)
-   * @param presort
-   *          whether or not to presort the list as additions are made
    * @param comparator
-   *          IntervalI.COMPARATOR_LITTLEENDIAN or
-   *          IntervalI.COMPARE_BEGIN_ASC_END_DESC, but this could also be one that
-   *          sorts by description as well, for example.
+   *          IntervalI.COMPARATOR_BEGIN_ASC_END_ASC or
+   *          IntervalI.COMPARE_BEGIN_ASC_END_DESC, but this could also be one
+   *          that sorts by description as well, for example.
    * @param bigendian
    *          true if the comparator sorts [10-100] before [10-80]; defaults to
    *          true
    */
-  public IntervalStore(List<T> intervals, boolean presort,
+  public IntervalStore(List<T> intervals,
           Comparator<? super IntervalI> comparator, boolean bigendian)
   {
+    // COMPARE_BEGIN_ASC_END_DESC is standard, meaning
+    // the order will be [10,100] before [10,80]
+    // this order doesn't really matter much.
     icompare = (comparator != null ? comparator
             : bigendian ? IntervalI.COMPARE_BEGIN_ASC_END_DESC
                     : IntervalI.COMPARE_BEGIN_ASC_END_ASC);
@@ -253,19 +239,20 @@ public class IntervalStore<T extends IntervalI>
               this.intervals = new IntervalI[capacity = intervalCount = intervals
                       .size()]);
     }
-    DO_PRESORT = presort;
-    if (DO_PRESORT && intervalCount > 1)
+    isTainted = true;
+    // DO_PRESORT = presort;
+    if (// DO_PRESORT &&
+    intervalCount > 1)
     {
       updateMinMaxStart();
-      isSorted = true;
-      isTainted = true;
+      // isSorted = true;
       ensureFinalized();
     }
-    else
-    {
-      isSorted = DO_PRESORT;
-      isTainted = true;
-    }
+    // else
+    // {
+    // isSorted = DO_PRESORT;
+    // isTainted = true;
+    // }
   }
 
   /**
@@ -321,18 +308,15 @@ public class IntervalStore<T extends IntervalI>
 
       }
 
-      if (DO_PRESORT && isSorted)
-      {
+      // if (DO_PRESORT && isSorted)
+      // {
         if (intervalCount == 0)
         {
           // ignore
         }
         else
         {
-          index = findInterval(interval);
-          // System.out.println("index = " + index + " for " + interval + "\n"
-          // + Arrays.toString(intervals) + "\n"
-          // + Arrays.toString(offsets));
+        index = findInterval(interval, allowDuplicates);
           if (!allowDuplicates && index >= 0)
           {
             return false;
@@ -347,15 +331,15 @@ public class IntervalStore<T extends IntervalI>
           }
         }
 
-      }
-      else
-      {
-        if (!allowDuplicates && findInterval(interval) >= 0)
-        {
-          return false;
-        }
-        isSorted = false;
-      }
+      // }
+      // else
+      // {
+      // if (!allowDuplicates && findInterval(interval) >= 0)
+      // {
+      // return false;
+      // }
+      // isSorted = false;
+      // }
 
       if (index == intervalCount)
       {
@@ -441,7 +425,6 @@ public class IntervalStore<T extends IntervalI>
     offsets = null;
     intervalCount = ntotal;
     capacity = dest.length;
-    // System.out.println(Arrays.toString(dest));
     return dest;
   }
 
@@ -453,7 +436,7 @@ public class IntervalStore<T extends IntervalI>
    */
   public int binaryIdentitySearch(IntervalI interval)
   {
-    return binaryIdentitySearch(interval, null);
+    return binaryIdentitySearch(interval, null, false);
   }
 
   /**
@@ -463,9 +446,12 @@ public class IntervalStore<T extends IntervalI>
    * @param interval
    * @param bsIgnore
    *          for deleted
+   * @param rangeOnly
+   *          don't do a full identity check, just a range check
    * @return index or, if not found, -1 - "would be here"
    */
-  public int binaryIdentitySearch(IntervalI interval, BitSet bsIgnore)
+  private int binaryIdentitySearch(IntervalI interval, BitSet bsIgnore,
+          boolean rangeOnly)
   {
     int start = 0;
     int r0 = interval.getBegin();
@@ -493,8 +479,8 @@ public class IntervalStore<T extends IntervalI>
         continue;
       case 0:
         IntervalI iv = intervals[mid];
-        if ((bsIgnore == null || !bsIgnore.get(mid))
-                && iv.equalsInterval(interval))
+        if (!rangeOnly && (bsIgnore == null || !bsIgnore.get(mid))
+                && sameInterval(interval, iv))
         {
           return mid;
           // found one; just scan up and down now, first checking the range, but
@@ -507,8 +493,8 @@ public class IntervalStore<T extends IntervalI>
           {
             break;
           }
-          if ((bsIgnore == null || !bsIgnore.get(i))
-                  && iv.equalsInterval(interval))
+          if (!rangeOnly && (bsIgnore == null || !bsIgnore.get(i))
+                  && sameInterval(interval, iv))
           {
             return i;
           }
@@ -521,7 +507,7 @@ public class IntervalStore<T extends IntervalI>
             return -1 - ++i;
           }
           if ((bsIgnore == null || !bsIgnore.get(i))
-                  && iv.equalsInterval(interval))
+                  && sameInterval(interval, iv))
           {
             return i;
           }
@@ -545,7 +531,7 @@ public class IntervalStore<T extends IntervalI>
   public void clear()
   {
     intervalCount = added = 0;
-    isSorted = true;
+    // isSorted = true;
     isTainted = true;
     offsets = null;
     intervals = new IntervalI[8];
@@ -580,12 +566,12 @@ public class IntervalStore<T extends IntervalI>
     {
       return false;
     }
-    if (!isSorted || deleted > 0)
+    if (// !isSorted ||
+    deleted > 0)
     {
       sort();
     }
-    int n = findInterval((IntervalI) entry);
-    return (n >= 0);
+    return (findInterval((IntervalI) entry, false) >= 0);
   }
 
   /**
@@ -612,7 +598,8 @@ public class IntervalStore<T extends IntervalI>
   {
     if (isTainted)
     {
-      if (!isSorted || added > 0 || deleted > 0)
+      if (// !isSorted ||
+      added > 0 || deleted > 0)
       {
         sort();
       }
@@ -932,15 +919,18 @@ public class IntervalStore<T extends IntervalI>
    * buffer
    * 
    * @param interval
+   * @param rangeOnly
+   *          don't do a full identity check, just a range check
+   * 
    * @return index (nonnegative) or index where it would go (negative)
    */
 
-  private int findInterval(IntervalI interval)
+  private int findInterval(IntervalI interval, boolean rangeOnly)
   {
 
-    if (isSorted)
-    {
-      int pt = binaryIdentitySearch(interval, null);
+    // if (isSorted)
+    // {
+    int pt = binaryIdentitySearch(interval, null, rangeOnly);
       // if (addPt == intervalCount || offsets[pt] == 0)
       // return pt;
       if (pt >= 0 || added == 0 || pt == -1 - intervalCount)
@@ -961,7 +951,7 @@ public class IntervalStore<T extends IntervalI>
         case -1:
           break;
         case 0:
-          if (iv.equalsInterval(interval))
+        if (!rangeOnly && sameInterval(iv, interval))
           {
             return pt;
           }
@@ -972,16 +962,16 @@ public class IntervalStore<T extends IntervalI>
         }
       }
       return -1 - match;
-    }
-    else
-    {
-      int i = intervalCount;
-      while (--i >= 0 && !intervals[i].equalsInterval(interval))
-      {
-        ;
-      }
-      return i;
-    }
+    // }
+    // else
+    // {
+    // int i = intervalCount;
+    // while (--i >= 0 && !sameInterval(intervals[i], interval))
+    // {
+    // ;
+    // }
+    // return i;
+    // }
   }
 
   /**
@@ -993,11 +983,12 @@ public class IntervalStore<T extends IntervalI>
   protected boolean removeInterval(IntervalI interval)
   {
 
-    if (!isSorted || added > 0)
+    if (// !isSorted ||
+    added > 0)
     {
       sort();
     }
-    int i = binaryIdentitySearch(interval, bsDeleted);
+    int i = binaryIdentitySearch(interval, bsDeleted, false);
     if (i < 0)
     {
       return false;
@@ -1067,7 +1058,7 @@ public class IntervalStore<T extends IntervalI>
   public boolean revalidate()
   {
     isTainted = true;
-    isSorted = false;
+    // isSorted = false;
     ensureFinalized();
     return true;
   }
@@ -1113,7 +1104,7 @@ public class IntervalStore<T extends IntervalI>
       Arrays.sort(intervals, 0, intervalCount, icompare);
     }
     updateMinMaxStart();
-    isSorted = true;
+    // isSorted = true;
   }
 
   /**
@@ -1136,7 +1127,7 @@ public class IntervalStore<T extends IntervalI>
      */
     int len = intervalCount + (createUnnested ? 2 : 1);
     root = intervalCount;
-    unnested = intervalCount + 1;
+    unnested = (createUnnested ? intervalCount + 1 : 0);
 
     /**
      * The three key arrays produced by this method:
@@ -1279,7 +1270,7 @@ public class IntervalStore<T extends IntervalI>
 
     int nextStart = counts[root];
     
-    if (unnested > 0)
+    if (createUnnested)
     {
       nestOffsets[root] = counts[unnested];
       nextStart += counts[unnested];
@@ -1354,5 +1345,22 @@ public class IntervalStore<T extends IntervalI>
     return prettyPrint();
   }
 
+  /**
+   * CAUTION! This presumes that equalsInterval does check descriptions. Note
+   * that bartongroup.IntervalStoreJ does NOT do this and
+   * jalview.datamodel.features.SequenceFeature does not, either. But
+   * nonc.SimpleFeature in test DOES do override equalsInterval.
+   * 
+   * The reason we do it this way is to avoid an unnecessary and costly test for
+   * obj instanceof IntervalI.
+   * 
+   * @param i1
+   * @param i2
+   * @return
+   */
+  protected boolean sameInterval(IntervalI i1, IntervalI i2)
+  {
+    return i1.equalsInterval(i2);
+  }
 
 }
