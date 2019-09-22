@@ -280,7 +280,7 @@ public class IntervalStore0<T extends IntervalI>
         }
         else
         {
-          index = findInterval(interval);
+        index = findInterval(interval, allowDuplicates);
           if (!allowDuplicates && index >= 0)
           {
             return false;
@@ -351,7 +351,7 @@ public class IntervalStore0<T extends IntervalI>
     // array is [(intervalCount)...null...(added)]
 
     int ntotal = intervalCount + added;
-    for (int ptShift = intervalCount + added, pt = intervalCount; pt >= 0;)
+    for (int ptShift = ntotal, pt = intervalCount; pt >= 0;)
     {
       int pt0 = pt;
       while (--pt >= 0 && offsets[pt] == 0)
@@ -385,9 +385,15 @@ public class IntervalStore0<T extends IntervalI>
     return dest;
   }
 
+  /**
+   * A binary search for a duplicate.
+   * 
+   * @param interval
+   * @return
+   */
   public int binaryIdentitySearch(IntervalI interval)
   {
-    return binaryIdentitySearch(interval, null);
+    return binaryIdentitySearch(interval, null, false);
   }
 
   /**
@@ -397,9 +403,12 @@ public class IntervalStore0<T extends IntervalI>
    * @param interval
    * @param bsIgnore
    *          for deleted
+   * @param rangeOnly
+   *          don't do a full identity check, just a range check
    * @return index or, if not found, -1 - "would be here"
    */
-  public int binaryIdentitySearch(IntervalI interval, BitSet bsIgnore)
+  private int binaryIdentitySearch(IntervalI interval, BitSet bsIgnore,
+          boolean rangeOnly)
   {
     int start = 0;
     int r0 = interval.getBegin();
@@ -427,7 +436,7 @@ public class IntervalStore0<T extends IntervalI>
         continue;
       case 0:
         IntervalI iv = intervals[mid];
-        if ((bsIgnore == null || !bsIgnore.get(mid))
+        if (!rangeOnly && (bsIgnore == null || !bsIgnore.get(mid))
                 && sameInterval(interval, iv))
         {
           return mid;
@@ -441,7 +450,7 @@ public class IntervalStore0<T extends IntervalI>
           {
             break;
           }
-          if ((bsIgnore == null || !bsIgnore.get(i))
+          if (!rangeOnly && (bsIgnore == null || !bsIgnore.get(i))
                   && sameInterval(interval, iv))
           {
             return i;
@@ -534,13 +543,13 @@ public class IntervalStore0<T extends IntervalI>
     {
       sort();
     }
-    return (findInterval((IntervalI) entry) >= 0);
+    return (findInterval((IntervalI) entry, false) >= 0);
   }
 
   public boolean containsInterval(IntervalI outer, IntervalI inner)
   {
     ensureFinalized();
-    int index = binaryIdentitySearch(inner, null);
+    int index = binaryIdentitySearch(inner);
     if (index >= 0)
     {
       while ((index = index - Math.abs(offsets[index])) >= 0)
@@ -841,15 +850,17 @@ public class IntervalStore0<T extends IntervalI>
    * buffer
    * 
    * @param interval
+   * @param rangeOnly
+   *          don't do a full check for identity, just check for range
    * @return index (nonnegative) or index where it would go (negative)
    */
 
-  private int findInterval(IntervalI interval)
+  private int findInterval(IntervalI interval, boolean rangeOnly)
   {
 
     // if (isSorted)
     // {
-      int pt = binaryIdentitySearch(interval, null);
+    int pt = binaryIdentitySearch(interval, null, rangeOnly);
       // if (addPt == intervalCount || offsets[pt] == 0)
       // return pt;
       if (pt >= 0 || added == 0 || pt == -1 - intervalCount)
@@ -870,7 +881,7 @@ public class IntervalStore0<T extends IntervalI>
         case -1:
           break;
         case 0:
-        if (sameInterval(iv, interval))
+        if (!rangeOnly && sameInterval(iv, interval))
           {
             return pt;
           }
@@ -907,7 +918,7 @@ public class IntervalStore0<T extends IntervalI>
     {
       sort();
     }
-    int i = binaryIdentitySearch(interval, bsDeleted);
+    int i = binaryIdentitySearch(interval, bsDeleted, false);
     if (i < 0)
     {
       return false;
@@ -1049,11 +1060,6 @@ public class IntervalStore0<T extends IntervalI>
   boolean sameInterval(IntervalI i1, IntervalI i2)
   {
     return i1.equalsInterval(i2);
-  }
-
-  private boolean sameRange(IntervalI i1, IntervalI i2)
-  {
-    return (i1.getBegin() == i2.getBegin() && i1.getEnd() == i2.getEnd());
   }
 
 }

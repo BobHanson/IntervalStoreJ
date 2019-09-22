@@ -316,10 +316,7 @@ public class IntervalStore<T extends IntervalI>
         }
         else
         {
-          index = findInterval(interval);
-          // System.out.println("index = " + index + " for " + interval + "\n"
-          // + Arrays.toString(intervals) + "\n"
-          // + Arrays.toString(offsets));
+        index = findInterval(interval, allowDuplicates);
           if (!allowDuplicates && index >= 0)
           {
             return false;
@@ -333,7 +330,7 @@ public class IntervalStore<T extends IntervalI>
             index++;
           }
         }
-      //
+
       // }
       // else
       // {
@@ -343,7 +340,7 @@ public class IntervalStore<T extends IntervalI>
       // }
       // isSorted = false;
       // }
-      //
+
       if (index == intervalCount)
       {
         intervals[intervalCount++] = interval;
@@ -428,7 +425,6 @@ public class IntervalStore<T extends IntervalI>
     offsets = null;
     intervalCount = ntotal;
     capacity = dest.length;
-    // System.out.println(Arrays.toString(dest));
     return dest;
   }
 
@@ -440,7 +436,7 @@ public class IntervalStore<T extends IntervalI>
    */
   public int binaryIdentitySearch(IntervalI interval)
   {
-    return binaryIdentitySearch(interval, null);
+    return binaryIdentitySearch(interval, null, false);
   }
 
   /**
@@ -450,9 +446,12 @@ public class IntervalStore<T extends IntervalI>
    * @param interval
    * @param bsIgnore
    *          for deleted
+   * @param rangeOnly
+   *          don't do a full identity check, just a range check
    * @return index or, if not found, -1 - "would be here"
    */
-  public int binaryIdentitySearch(IntervalI interval, BitSet bsIgnore)
+  private int binaryIdentitySearch(IntervalI interval, BitSet bsIgnore,
+          boolean rangeOnly)
   {
     int start = 0;
     int r0 = interval.getBegin();
@@ -480,8 +479,8 @@ public class IntervalStore<T extends IntervalI>
         continue;
       case 0:
         IntervalI iv = intervals[mid];
-        if ((bsIgnore == null || !bsIgnore.get(mid))
-                && sameInterval(iv, interval))
+        if (!rangeOnly && (bsIgnore == null || !bsIgnore.get(mid))
+                && sameInterval(interval, iv))
         {
           return mid;
           // found one; just scan up and down now, first checking the range, but
@@ -494,8 +493,8 @@ public class IntervalStore<T extends IntervalI>
           {
             break;
           }
-          if ((bsIgnore == null || !bsIgnore.get(i))
-                  && iv.equalsInterval(interval))
+          if (!rangeOnly && (bsIgnore == null || !bsIgnore.get(i))
+                  && sameInterval(interval, iv))
           {
             return i;
           }
@@ -508,7 +507,7 @@ public class IntervalStore<T extends IntervalI>
             return -1 - ++i;
           }
           if ((bsIgnore == null || !bsIgnore.get(i))
-                  && iv.equalsInterval(interval))
+                  && sameInterval(interval, iv))
           {
             return i;
           }
@@ -572,8 +571,7 @@ public class IntervalStore<T extends IntervalI>
     {
       sort();
     }
-    int n = findInterval((IntervalI) entry);
-    return (n >= 0);
+    return (findInterval((IntervalI) entry, false) >= 0);
   }
 
   /**
@@ -921,15 +919,18 @@ public class IntervalStore<T extends IntervalI>
    * buffer
    * 
    * @param interval
+   * @param rangeOnly
+   *          don't do a full identity check, just a range check
+   * 
    * @return index (nonnegative) or index where it would go (negative)
    */
 
-  private int findInterval(IntervalI interval)
+  private int findInterval(IntervalI interval, boolean rangeOnly)
   {
 
     // if (isSorted)
     // {
-      int pt = binaryIdentitySearch(interval, null);
+    int pt = binaryIdentitySearch(interval, null, rangeOnly);
       // if (addPt == intervalCount || offsets[pt] == 0)
       // return pt;
       if (pt >= 0 || added == 0 || pt == -1 - intervalCount)
@@ -950,7 +951,7 @@ public class IntervalStore<T extends IntervalI>
         case -1:
           break;
         case 0:
-          if (sameInterval(interval, iv))
+        if (!rangeOnly && sameInterval(iv, interval))
           {
             return pt;
           }
@@ -987,7 +988,7 @@ public class IntervalStore<T extends IntervalI>
     {
       sort();
     }
-    int i = binaryIdentitySearch(interval, bsDeleted);
+    int i = binaryIdentitySearch(interval, bsDeleted, false);
     if (i < 0)
     {
       return false;
