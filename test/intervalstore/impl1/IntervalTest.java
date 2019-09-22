@@ -29,7 +29,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package intervalstore.nonc;
+package intervalstore.impl1;
 
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -37,9 +37,8 @@ import static org.testng.Assert.assertTrue;
 import org.testng.annotations.Test;
 
 import intervalstore.api.IntervalI;
-import intervalstore.impl1.Range;
 
-public class IntervalITest
+public class IntervalTest
 {
   @Test(groups="Functional")
   public void testContainsInterval()

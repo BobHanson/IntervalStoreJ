@@ -45,7 +45,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import intervalstore.api.IntervalI;
-import intervalstore.impl.SimpleFeature;
+import intervalstore.impl1.SimpleFeature;
 
 /**
  * Does a number of pseudo-random (reproducible) tests of an NoNCList, to exercise

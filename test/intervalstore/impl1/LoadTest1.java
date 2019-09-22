@@ -29,7 +29,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-package intervalstore.nonc;
+package intervalstore.impl1;
 
 import static org.testng.Assert.assertTrue;
 
@@ -46,7 +46,6 @@ import java.util.zip.ZipInputStream;
 
 import org.testng.annotations.Test;
 
-import intervalstore.impl1.SimpleFeature;
 import junit.extensions.PA;
 
 /**
@@ -55,7 +54,7 @@ import junit.extensions.PA;
  * @author gmcarstairs
  *
  */
-public class ISLinkLoadTest
+public class LoadTest1
 {
   /*
    * Ensembl and gnomAD variants on human BRAF gene 
@@ -125,9 +124,6 @@ public class ISLinkLoadTest
           }
           String description = chr + ":" + desc;
           SimpleFeature sf = new SimpleFeature(from, to, description);
-          //
-          // if (fs.size() > 700)
-          // System.out.println(fs.size() + " " + sf);
           fs.add(sf);
         }
         line = br.readLine();

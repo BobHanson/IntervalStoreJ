@@ -45,8 +45,8 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import intervalstore.api.IntervalI;
-import intervalstore.impl.NCList;
-import intervalstore.impl.Range;
+import intervalstore.impl1.NCList;
+import intervalstore.impl1.Range;
 
 /**
  * Note: This class has been extensively modified by Bob Hanson. It is a work in
@@ -324,10 +324,14 @@ public class ISLinkTimingTests
   {
     ISLinkTimingTests test = new ISLinkTimingTests();
     test.setUp();
-    if (test.doTest(TEST_QUERY2))
-      test.testQueryTime2();
-    else
-      test.testQueryTime();
+    test.testMode = TEST_INCR_NODUP | TEST_IS_NCLIST;
+    test.testLoadTimeIncrementalNoDuplicates();
+    //
+    //
+    // if (test.doTest(TEST_QUERY2))
+    // test.testQueryTime2();
+    // else
+    // test.testQueryTime();
     test.tearDown();
 
   }
@@ -831,7 +835,7 @@ public class ISLinkTimingTests
   private void testQuery(String mode, boolean addEncompassingInterval)
   {
     intervalstore.impl0.IntervalStore<Range> store0 = null;
-    intervalstore.impl.IntervalStore<Range> store1 = null;
+    intervalstore.impl1.IntervalStore<Range> store1 = null;
     intervalstore.nonc.IntervalStore<Range> store2 = null;
     intervalstore.nonc.IntervalStore0<Range> store3 = null;
     intervalstore.impl0.NCList<Range> nclist0 = null;
@@ -884,7 +888,7 @@ public class ISLinkTimingTests
           store0 = new intervalstore.impl0.IntervalStore<>(ranges);
           break;
         case MODE_INTERVAL_STORE_NCLIST:
-          store1 = new intervalstore.impl.IntervalStore<>(ranges);
+          store1 = new intervalstore.impl1.IntervalStore<>(ranges);
           break;
         case MODE_INTERVAL_STORE_LINK:
           store2 = new intervalstore.nonc.IntervalStore<>(ranges);
@@ -1025,7 +1029,7 @@ public class ISLinkTimingTests
   {
     System.out.println("# remove " + mode);
     intervalstore.impl0.IntervalStore<Range> store0 = null;
-    intervalstore.impl.IntervalStore<Range> store1 = null;
+    intervalstore.impl1.IntervalStore<Range> store1 = null;
     intervalstore.nonc.IntervalStore<Range> store2 = null;
     intervalstore.nonc.IntervalStore0<Range> store3 = null;
     intervalstore.impl0.NCList<Range> nclist0 = null;
@@ -1057,7 +1061,7 @@ public class ISLinkTimingTests
         switch (mode)
         {
         case MODE_INTERVAL_STORE_NCLIST:
-          store1 = new intervalstore.impl.IntervalStore<>(ranges);
+          store1 = new intervalstore.impl1.IntervalStore<>(ranges);
           break;
         case MODE_INTERVAL_STORE_NCLIST0:
           store0 = new intervalstore.impl0.IntervalStore<>(ranges);

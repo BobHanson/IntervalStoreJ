@@ -39,7 +39,7 @@ import java.util.Comparator;
 import org.testng.annotations.Test;
 
 import intervalstore.api.IntervalI;
-import intervalstore.impl.Range;
+import intervalstore.impl1.Range;
 
 public class RangeTest
 {
