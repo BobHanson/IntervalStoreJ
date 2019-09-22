@@ -38,14 +38,9 @@ import intervalstore.api.IntervalI;
  */
 public class Range implements IntervalI
 {
+  public final int start;
 
-  // no need for final here; these can be fully mutable as long as
-  // store.revalidate() is run afterwords
-
-  public int start;
-
-  public int end;
-
+  public final int end;
 
   @Override
   public int getBegin()
@@ -80,28 +75,6 @@ public class Range implements IntervalI
   @Override
   public boolean equals(Object o)
   {
-    return (o != null && o instanceof Range && equalsInterval((Range) o));
+    return (o instanceof Range) && equalsInterval((Range) o);
   }
-
-  @Override
-  public boolean equalsInterval(IntervalI obj)
-  {
-
-    // override equalsInterval, not equals
-    return (obj != null && start == ((Range) obj).start
-            && end == ((Range) obj).end);
-
-  }
-
-  public void setStart(int pos)
-  {
-    start = pos;
-  }
-
-  public void setEnd(int pos)
-  {
-    end = pos;
-  }
-
-
 }

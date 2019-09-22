@@ -77,7 +77,7 @@ public class NCListBuilder<T extends IntervalI>
   // }
   // }
 
-  private Comparator<? super IntervalI> comparator = IntervalI.COMPARATOR_BIGENDIAN;// new
+  private Comparator<? super IntervalI> comparator = IntervalI.COMPARE_BEGIN_ASC_END_DESC;// new
                                                                                     // NCListComparator<>();
   
   /**

@@ -47,7 +47,7 @@ public class RangeTest
   @Test(groups = "Functional")
   public void testCompare()
   {
-    Comparator<? super IntervalI> comp = IntervalI.COMPARATOR_BIGENDIAN;
+    Comparator<? super IntervalI> comp = IntervalI.COMPARE_BEGIN_ASC_END_DESC;
 
     // same position, same length
     assertEquals(comp.compare(new Range(10, 20), new Range(10, 20)), 0);

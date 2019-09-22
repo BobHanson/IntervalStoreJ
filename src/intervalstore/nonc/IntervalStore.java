@@ -224,7 +224,7 @@ public class IntervalStore<T extends IntervalI>
    *          whether or not to presort the list as additions are made
    * @param comparator
    *          IntervalI.COMPARATOR_LITTLEENDIAN or
-   *          IntervalI.COMPARATOR_BIGENDIAN, but this could also be one that
+   *          IntervalI.COMPARE_BEGIN_ASC_END_DESC, but this could also be one that
    *          sorts by description as well, for example.
    * @param bigendian
    *          true if the comparator sorts [10-100] before [10-80]; defaults to
@@ -234,8 +234,8 @@ public class IntervalStore<T extends IntervalI>
           Comparator<? super IntervalI> comparator, boolean bigendian)
   {
     icompare = (comparator != null ? comparator
-            : bigendian ? IntervalI.COMPARATOR_BIGENDIAN
-                    : IntervalI.COMPARATOR_LITTLEENDIAN);
+            : bigendian ? IntervalI.COMPARE_BEGIN_ASC_END_DESC
+                    : IntervalI.COMPARE_BEGIN_ASC_END_ASC);
     this.bigendian = bigendian;
 
     if (intervals != null)
@@ -532,7 +532,6 @@ public class IntervalStore<T extends IntervalI>
     return -1 - start;
   }
 
-  @Override
   public boolean canCheckForDuplicates()
   {
     return true;
@@ -776,7 +775,6 @@ public class IntervalStore<T extends IntervalI>
    * return the i-th interval in the designated order (bigendian or
    * littleendian)
    */
-  @Override
   public IntervalI get(int i)
   {
     if (i < 0 || i >= intervalCount + added)
@@ -831,14 +829,12 @@ public class IntervalStore<T extends IntervalI>
    * Get the number of root-level nests.
    * 
    */
-  @Override
   public int getWidth()
   {
     ensureFinalized();
     return nestLengths[root] + (createUnnested ? nestLengths[unnested] : 0);
   }
 
-  @Override
   public boolean isValid()
   {
     ensureFinalized();
@@ -1068,7 +1064,6 @@ public class IntervalStore<T extends IntervalI>
    * Recreate the key nest arrays.
    * 
    */
-  @Override
   public boolean revalidate()
   {
     isTainted = true;

@@ -31,20 +31,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package intervalstore.api;
 
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
 
 public interface IntervalI
 {
 
   /**
-   * Compare intervals by start position ascending and end position descending.
-   * 
-   * BIGENDIAN sorts 10-100 ahead of 10-80 (original IntervalStoreJ method
-   * 
+   * Compares intervals by start position ascending and end position descending
    */
-  static Comparator<? super IntervalI> COMPARATOR_BIGENDIAN = new Comparator<IntervalI>()
+  static Comparator<? super IntervalI> COMPARE_BEGIN_ASC_END_DESC = new Comparator<IntervalI>()
   {
     @Override
     public int compare(IntervalI o1, IntervalI o2)
@@ -55,12 +50,9 @@ public interface IntervalI
   };
 
   /**
-   * Compare intervals by start position ascending and end position descending.
-   * 
-   * LITTLEENDIAN sorts 10-100 after 10-80
-   * 
+   * Compares intervals by start position ascending and end position ascending
    */
-  static Comparator<? super IntervalI> COMPARATOR_LITTLEENDIAN = new Comparator<IntervalI>()
+  static Comparator<? super IntervalI> COMPARE_BEGIN_ASC_END_ASC = new Comparator<IntervalI>()
   {
     @Override
     public int compare(IntervalI o1, IntervalI o2)
@@ -71,9 +63,9 @@ public interface IntervalI
   };
 
   /**
-   * a comparator for sorting intervals by start position ascending
+   * Compares intervals by start position ascending
    */
-  static Comparator<? super IntervalI> FORWARD_STRAND = new Comparator<IntervalI>()
+  static Comparator<? super IntervalI> COMPARE_BEGIN_ASC = new Comparator<IntervalI>()
   {
     @Override
     public int compare(IntervalI o1, IntervalI o2)
@@ -83,9 +75,9 @@ public interface IntervalI
   };
 
   /**
-   * a comparator for sorting intervals by end position descending
+   * Compares intervals by end position descending
    */
-  static Comparator<? super IntervalI> REVERSE_STRAND = new Comparator<IntervalI>()
+  static Comparator<? super IntervalI> COMPARE_END_DESC = new Comparator<IntervalI>()
   {
     @Override
     public int compare(IntervalI o1, IntervalI o2)
@@ -94,25 +86,31 @@ public interface IntervalI
     }
   };
 
-  static int NOT_CONTAINED = Integer.MIN_VALUE;
-  static int CONTAINMENT_UNKNOWN = 0;
-
+  /**
+   * Answers the start position of the interval
+   * 
+   * @return
+   */
   int getBegin();
+
+  /**
+   * Answers the end position of the interval
+   * 
+   * @return
+   */
   int getEnd();
 
   /**
    * Answers true if this interval contains (or matches) the given interval
-   * based solely on start and end.
    * 
    * @param i
    * @return
    */
   default boolean containsInterval(IntervalI i)
   {
-    return i != null && i.getBegin() >= getBegin()
-            && i.getEnd() <= getEnd();
+    return i != null
+            && i.getBegin() >= getBegin() && i.getEnd() <= getEnd();
   }
-
 
   /**
    * Answers true if this interval properly contains the given interval, that
@@ -128,41 +126,25 @@ public interface IntervalI
   }
 
   /**
-   * Slower than equalsInterval; also includes type.
-   * 
-   * Ensure that subclasses override equals(Object). For example:
-   * 
-   * public boolean equals(Object o) { return o != null && o instanceof XXX &&
-   * equalsInterval((XXX) i); }
-   * 
-   * 
-   * equalsInterval also must be overridden.
-   * 
-   * public boolean equalsInterval(IntervalI i) {return ((SimpleFeature)i).start
-   * == start && ((SimpleFeature)i).end == end && ((SimpleFeature)i).description
-   * == this.description; }
-   * 
-   * 
-   * @param o
-   * @return true if equal, including a type check
-   */
-  @Override
-  abstract boolean equals(Object o);
-
-
-
-  /**
-   * Check that two intervals are equal, in terms of end points, descriptions,
-   * or any other distinguishing features.
-   * 
-   * Used in IntervalStore in searches, since it is faster than equals(), as at
-   * that point we know that we have the correct type.
+   * Answers true if the interval has the same begin and end as this one, else
+   * false
    * 
    * @param i
-   * @return true if equal
+   * @return
    */
-  abstract boolean equalsInterval(IntervalI i);
+  default boolean equalsInterval(IntervalI i)
+  {
+    return i != null && i.getBegin() == getBegin()
+            && i.getEnd() == getEnd();
+  }
 
+  /**
+   * Answers true if interval i overlaps this one (they share at least one
+   * position), else false
+   * 
+   * @param i
+   * @return
+   */
   default boolean overlapsInterval(IntervalI i)
   {
     if (i == null)
@@ -179,20 +161,4 @@ public interface IntervalI
     }
     return true; // i internal to this
   }
-
-  /**
-   * Sorts the list by start position ascending (if forwardString==true), or by
-   * end position descending
-   * 
-   * @param intervals
-   * @param forwardStrand
-   */
-  static void sortIntervals(List<? extends IntervalI> intervals,
-          final boolean forwardStrand)
-  {
-    Collections.sort(intervals,
-            forwardStrand ? FORWARD_STRAND : REVERSE_STRAND);
-  }
-
-
 }

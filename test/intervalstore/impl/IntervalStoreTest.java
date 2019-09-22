@@ -501,9 +501,15 @@ public class IntervalStoreTest
     assertTrue(store.contains(sf1));
     assertTrue(store.contains(sf2));
 
+    /*
+     * duplicates are accepted
+     */
+    assertTrue(store.add(sf2));
+    assertEquals(store.size(), 2);
+
     SimpleFeature sf3 = new SimpleFeature(0, 0, "Cath");
     assertTrue(store.add(sf3));
-    assertEquals(store.size(), 2);
+    assertEquals(store.size(), 3);
   }
 
   @Test(groups = "Functional")
@@ -762,5 +768,158 @@ public class IntervalStoreTest
     assertEquals(store.getDepth(), 2);
     store.remove(sf1); // leaves an empty non-nested list
     assertEquals(store.getDepth(), 1);
+  }
+
+  @Test(groups = "Functional")
+  public void testFindOverlaps_resultsArg_mixed()
+  {
+    IntervalStore<SimpleFeature> store = new IntervalStore<>();
+    SimpleFeature sf1 = add(store, 10, 50);
+    SimpleFeature sf2 = add(store, 1, 15);
+    SimpleFeature sf3 = add(store, 20, 30);
+    SimpleFeature sf4 = add(store, 40, 100);
+    SimpleFeature sf5 = add(store, 60, 100);
+    SimpleFeature sf6 = add(store, 70, 70);
+  
+    List<SimpleFeature> overlaps = new ArrayList<>();
+    List<SimpleFeature> overlaps2 = store.findOverlaps(200, 200, overlaps);
+    assertSame(overlaps, overlaps2);
+    assertTrue(overlaps.isEmpty());
+  
+    overlaps.clear();
+    store.findOverlaps(1, 9, overlaps);
+    assertEquals(overlaps.size(), 1);
+    assertTrue(overlaps.contains(sf2));
+  
+    overlaps.clear();
+    store.findOverlaps(5, 18, overlaps);
+    assertEquals(overlaps.size(), 2);
+    assertTrue(overlaps.contains(sf1));
+    assertTrue(overlaps.contains(sf2));
+  
+    overlaps.clear();
+    store.findOverlaps(30, 40, overlaps);
+    assertEquals(overlaps.size(), 3);
+    assertTrue(overlaps.contains(sf1));
+    assertTrue(overlaps.contains(sf3));
+    assertTrue(overlaps.contains(sf4));
+  
+    overlaps.clear();
+    store.findOverlaps(80, 90, overlaps);
+    assertEquals(overlaps.size(), 2);
+    assertTrue(overlaps.contains(sf4));
+    assertTrue(overlaps.contains(sf5));
+  
+    overlaps.clear();
+    store.findOverlaps(68, 70, overlaps);
+    assertEquals(overlaps.size(), 3);
+    assertTrue(overlaps.contains(sf4));
+    assertTrue(overlaps.contains(sf5));
+    assertTrue(overlaps.contains(sf6));
+
+    /*
+     * and without clearing the list first
+     * note that sf4 is included twice, as an
+     * overlap of 68-70 and also of 30-40
+     */
+    store.findOverlaps(30, 40, overlaps);
+    assertEquals(overlaps.size(), 6);
+    assertTrue(overlaps.contains(sf1));
+    assertTrue(overlaps.contains(sf3));
+    assertTrue(overlaps.contains(sf4));
+    assertTrue(overlaps.contains(sf5));
+    assertTrue(overlaps.contains(sf6));
+    assertSame(sf4, overlaps.get(0));
+    assertSame(sf4, overlaps.get(4));
+  }
+
+  @Test(groups = "Functional")
+  public void testFindOverlaps_resultsArg_nested()
+  {
+    IntervalStore<SimpleFeature> store = new IntervalStore<>();
+    SimpleFeature sf1 = add(store, 10, 50);
+    SimpleFeature sf2 = add(store, 10, 40);
+    SimpleFeature sf3 = add(store, 20, 30);
+    // feature at same location but different description
+    SimpleFeature sf4 = new SimpleFeature(20, 30, "different desc");
+    store.add(sf4);
+    SimpleFeature sf5 = add(store, 35, 36);
+  
+    List<SimpleFeature> overlaps = new ArrayList<>();
+    store.findOverlaps(1, 9, overlaps);
+    assertTrue(overlaps.isEmpty());
+  
+    store.findOverlaps(10, 15, overlaps);
+    assertEquals(overlaps.size(), 2);
+    assertTrue(overlaps.contains(sf1));
+    assertTrue(overlaps.contains(sf2));
+  
+    overlaps.clear();
+    store.findOverlaps(45, 60, overlaps);
+    assertEquals(overlaps.size(), 1);
+    assertTrue(overlaps.contains(sf1));
+  
+    overlaps.clear();
+    store.findOverlaps(32, 38, overlaps);
+    assertEquals(overlaps.size(), 3);
+    assertTrue(overlaps.contains(sf1));
+    assertTrue(overlaps.contains(sf2));
+    assertTrue(overlaps.contains(sf5));
+  
+    overlaps.clear();
+    store.findOverlaps(15, 25, overlaps);
+    assertEquals(overlaps.size(), 4);
+    assertTrue(overlaps.contains(sf1));
+    assertTrue(overlaps.contains(sf2));
+    assertTrue(overlaps.contains(sf3));
+    assertTrue(overlaps.contains(sf4));
+  }
+
+  @Test(groups = "Functional")
+  public void testFindOverlaps_resultsArg_nonNested()
+  {
+    IntervalStore<SimpleFeature> store = new IntervalStore<>();
+    SimpleFeature sf1 = add(store, 10, 20);
+    // same range different description
+    SimpleFeature sf2 = new SimpleFeature(10, 20, "desc");
+    store.add(sf2);
+    SimpleFeature sf3 = add(store, 15, 25);
+    SimpleFeature sf4 = add(store, 20, 35);
+  
+    assertTrue(store.isValid());
+    assertEquals(store.size(), 4);
+    assertNull(PA.getValue(store, "nested"));
+    List<SimpleFeature> overlaps = new ArrayList<>();
+    store.findOverlaps(1, 9, overlaps);
+    assertTrue(overlaps.isEmpty());
+  
+    store.findOverlaps(8, 10, overlaps);
+    assertEquals(overlaps.size(), 2);
+    assertTrue(overlaps.contains(sf1));
+    assertTrue(overlaps.contains(sf2));
+  
+    overlaps.clear();
+    store.findOverlaps(12, 16, overlaps);
+    assertEquals(overlaps.size(), 3);
+    assertTrue(overlaps.contains(sf1));
+    assertTrue(overlaps.contains(sf2));
+    assertTrue(overlaps.contains(sf3));
+  
+    overlaps.clear();
+    store.findOverlaps(33, 33, overlaps);
+    assertEquals(overlaps.size(), 1);
+    assertTrue(overlaps.contains(sf4));
+  
+    /*
+     * ensure edge cases are covered
+     */
+    overlaps.clear();
+    store.findOverlaps(35, 40, overlaps);
+    assertEquals(overlaps.size(), 1);
+    assertTrue(overlaps.contains(sf4));
+
+    overlaps.clear();
+    assertTrue(store.findOverlaps(36, 100, overlaps).isEmpty());
+    assertTrue(store.findOverlaps(1, 9, overlaps).isEmpty());
   }
 }
