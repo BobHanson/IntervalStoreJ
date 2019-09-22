@@ -45,7 +45,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import intervalstore.api.IntervalI;
-import intervalstore.impl1.SimpleFeature;
+import intervalstore.nonc.SimpleFeature;
 
 /**
  * Does a number of pseudo-random (reproducible) tests of an NoNCList, to exercise
@@ -206,8 +206,6 @@ public class ISLinkRandomisedTest
           System.out.println(
                   "feature is not correctly overriding Object.equals");
         assertFalse(ncl.contains(feature));
-        if (from == 2 && to == 5)
-          System.out.println("???????" + feature);
         ncl.add(feature);
         if (!ncl.contains(feature))
         {
