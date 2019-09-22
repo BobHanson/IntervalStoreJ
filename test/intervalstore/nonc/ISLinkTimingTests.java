@@ -45,8 +45,8 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import intervalstore.api.IntervalI;
-import intervalstore.impl1.NCList;
-import intervalstore.impl1.Range;
+import intervalstore.impl.NCList;
+import intervalstore.impl.Range;
 
 /**
  * Note: This class has been extensively modified by Bob Hanson. It is a work in
@@ -277,7 +277,8 @@ public class ISLinkTimingTests
 
   private static final String MODE_INTERVAL_STORE_NCLIST0 = "IntStoreNCList0";
 
-  private static final String MODE_INTERVAL_STORE_LINK = "IntStoreLink";
+  private static final String MODE_INTERVAL_STORE_NCARRAY = "IntStoreArray"; // was
+                                                                             // "IntStoreLink"
 
   private static final String MODE_INTERVAL_STORE_LINK0 = "IntStoreLink0";
 
@@ -324,14 +325,14 @@ public class ISLinkTimingTests
   {
     ISLinkTimingTests test = new ISLinkTimingTests();
     test.setUp();
-    test.testMode = TEST_INCR_NODUP | TEST_IS_NCLIST;
-    test.testLoadTimeIncrementalNoDuplicates();
-    //
-    //
-    // if (test.doTest(TEST_QUERY2))
-    // test.testQueryTime2();
-    // else
-    // test.testQueryTime();
+    // test.testMode = TEST_INCR_NODUP | TEST_IS_NCLIST | TEST_IS_LINK;
+    // test.testLoadTimeIncrementalNoDuplicates();
+
+    test.testMode = TEST_QUERY | TEST_IS_NCLIST | TEST_IS_LINK;
+    if (test.doTest(TEST_QUERY2))
+      test.testQueryTime2();
+    else
+      test.testQueryTime();
     test.tearDown();
 
   }
@@ -480,7 +481,7 @@ public class ISLinkTimingTests
       testBulkLoad(MODE_INTERVAL_STORE_NCLIST0);
 
     if (doTest(TEST_IS_LINK_1))
-      testBulkLoad(MODE_INTERVAL_STORE_LINK);
+      testBulkLoad(MODE_INTERVAL_STORE_NCARRAY);
     if (doTest(TEST_IS_LINK_0))
       testBulkLoad(MODE_INTERVAL_STORE_LINK0);
 
@@ -505,7 +506,7 @@ public class ISLinkTimingTests
       testIncrLoad(MODE_INTERVAL_STORE_NCLIST0, true);
 
     if (doTest(TEST_IS_LINK_1))
-      testIncrLoad(MODE_INTERVAL_STORE_LINK, true);
+      testIncrLoad(MODE_INTERVAL_STORE_NCARRAY, true);
     if (doTest(TEST_IS_LINK_0))
       testIncrLoad(MODE_INTERVAL_STORE_LINK0, true);
 
@@ -534,7 +535,7 @@ public class ISLinkTimingTests
       testIncrLoad(MODE_INTERVAL_STORE_NCLIST0, false);
 
     if (doTest(TEST_IS_LINK_1))
-      testIncrLoad(MODE_INTERVAL_STORE_LINK, false);
+      testIncrLoad(MODE_INTERVAL_STORE_NCARRAY, false);
     if (doTest(TEST_IS_LINK_0))
       testIncrLoad(MODE_INTERVAL_STORE_LINK0, false);
 
@@ -560,7 +561,7 @@ public class ISLinkTimingTests
       testQuery(MODE_INTERVAL_STORE_NCLIST0);
 
     if (doTest(TEST_IS_LINK_1))
-      testQuery(MODE_INTERVAL_STORE_LINK);
+      testQuery(MODE_INTERVAL_STORE_NCARRAY);
     if (doTest(TEST_IS_LINK_0))
       testQuery(MODE_INTERVAL_STORE_LINK0);
 
@@ -589,7 +590,7 @@ public class ISLinkTimingTests
       testQuery2(MODE_INTERVAL_STORE_NCLIST0);
 
     if (doTest(TEST_IS_LINK_1))
-      testQuery2(MODE_INTERVAL_STORE_LINK);
+      testQuery2(MODE_INTERVAL_STORE_NCARRAY);
     if (doTest(TEST_IS_LINK_0))
       testQuery2(MODE_INTERVAL_STORE_LINK0);
 
@@ -618,7 +619,7 @@ public class ISLinkTimingTests
     if (doTest(TEST_IS_NCLIST_0))
       testRemove(MODE_INTERVAL_STORE_NCLIST0);
 
-    testRemove(MODE_INTERVAL_STORE_LINK);
+    testRemove(MODE_INTERVAL_STORE_NCARRAY);
     if (doTest(TEST_IS_LINK_0))
       testRemove(MODE_INTERVAL_STORE_LINK0);
 
@@ -659,7 +660,7 @@ public class ISLinkTimingTests
         case MODE_INTERVAL_STORE_NCLIST0:
           new intervalstore.impl0.IntervalStore<>(ranges);
           break;
-        case MODE_INTERVAL_STORE_LINK:
+        case MODE_INTERVAL_STORE_NCARRAY:
           new intervalstore.nonc.IntervalStore<>(ranges);
           break;
         case MODE_INTERVAL_STORE_LINK0:
@@ -742,7 +743,7 @@ public class ISLinkTimingTests
           }
           break;
 
-        case MODE_INTERVAL_STORE_LINK:
+        case MODE_INTERVAL_STORE_NCARRAY:
           intervalstore.nonc.IntervalStore<Range> store2 = new intervalstore.nonc.IntervalStore<>();
           for (int ir = 0; ir < count; ir++)
           {
@@ -890,7 +891,7 @@ public class ISLinkTimingTests
         case MODE_INTERVAL_STORE_NCLIST:
           store1 = new intervalstore.impl1.IntervalStore<>(ranges);
           break;
-        case MODE_INTERVAL_STORE_LINK:
+        case MODE_INTERVAL_STORE_NCARRAY:
           store2 = new intervalstore.nonc.IntervalStore<>(ranges);
           break;
         case MODE_INTERVAL_STORE_LINK0:
@@ -924,7 +925,7 @@ public class ISLinkTimingTests
           case MODE_INTERVAL_STORE_NCLIST:
             result = store1.findOverlaps(q.getBegin(), q.getEnd());
             break;
-          case MODE_INTERVAL_STORE_LINK:
+          case MODE_INTERVAL_STORE_NCARRAY:
             if (USE_RESULT_PARAM)
             {
               result.clear();
@@ -1001,7 +1002,7 @@ public class ISLinkTimingTests
               + " width:?");
 
       break;
-    case MODE_INTERVAL_STORE_LINK:
+    case MODE_INTERVAL_STORE_NCARRAY:
       System.out.println("# dimensions depth:" + store2.getDepth()
               + " width:" + store2.getWidth() + "]");
       break;
@@ -1011,11 +1012,11 @@ public class ISLinkTimingTests
       break;
     case MODE_NCLIST:
       System.out.println("# dimensions depth:" + nclist.getDepth()
-              + " width:" + nclist.getWidth() + "]");
+              + " width:?");
       break;
     case MODE_NCLIST0:
       System.out.println("# dimensions depth:" + nclist0.getDepth()
-              + " width:" + nclist0.getWidth() + "]");
+              + " width:?");
       break;
     case MODE_NAIVE:
       System.out
@@ -1066,7 +1067,7 @@ public class ISLinkTimingTests
         case MODE_INTERVAL_STORE_NCLIST0:
           store0 = new intervalstore.impl0.IntervalStore<>(ranges);
           break;
-        case MODE_INTERVAL_STORE_LINK:
+        case MODE_INTERVAL_STORE_NCARRAY:
           store2 = new intervalstore.nonc.IntervalStore<>(ranges);
           break;
         case MODE_INTERVAL_STORE_LINK0:
@@ -1098,7 +1099,7 @@ public class ISLinkTimingTests
           case MODE_INTERVAL_STORE_NCLIST0:
             store0.remove(r);
             break;
-          case MODE_INTERVAL_STORE_LINK:
+          case MODE_INTERVAL_STORE_NCARRAY:
             store2.remove(r);
             break;
           case MODE_INTERVAL_STORE_LINK0:
@@ -1121,7 +1122,7 @@ public class ISLinkTimingTests
           break;
         case MODE_INTERVAL_STORE_NCLIST0:
           break;
-        case MODE_INTERVAL_STORE_LINK:
+        case MODE_INTERVAL_STORE_NCARRAY:
           store2.revalidate();
           break;
         case MODE_INTERVAL_STORE_LINK0:

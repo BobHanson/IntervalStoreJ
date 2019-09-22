@@ -37,7 +37,6 @@ import java.util.Comparator;
 import java.util.List;
 
 import intervalstore.api.IntervalI;
-import intervalstore.impl.Range;
 
 /**
  * A comparator that orders ranges by either start position ascending. If
@@ -49,53 +48,29 @@ import intervalstore.impl.Range;
  */
 public class NCListBuilder<T extends IntervalI>
 {
+  /**
+   * Compares two intervals in a way that will sort a list by start position
+   * ascending, then by length descending
+   */
   class NCListComparator<V extends IntervalI> implements Comparator<V>
   {
-    /**
-     * Compares two intervals in a way that will sort a list by start position
-     * ascending, then by length descending. Answers
-     * <ul>
-     * <li>a negative value if o1.begin < o2.begin</li>
-     * <li>else a positive value if o1.begin > o2.begin</li>
-     * <li>else a negative value if o1.end > o2.end</li>
-     * <li>else a positive value of o1.end < o2.end</li>
-     * <li>else zero</li
-     * </ul>
-     */
     @Override
     public int compare(V o1, V o2)
     {
       int order = Integer.compare(o1.getBegin(), o2.getBegin());
       if (order == 0)
       {
-        /*
-         * if tied on start position, longer length sorts to left
-         * i.e. the negation of normal ordering by length
-         */
         order = Integer.compare(o2.getEnd(), o1.getEnd());
       }
       return order;
     }
   }
-
-  private Comparator<T> comparator = new NCListComparator<>();
   
   /**
    * Default constructor
    */
   public NCListBuilder()
   {
-  }
-
-  /**
-   * Answers a comparator which sorts items of type T by start position
-   * ascending, and within that by end position (length) descending)
-   * 
-   * @return
-   */
-  Comparator<T> getComparator()
-  {
-    return comparator;
   }
 
   /**
@@ -114,7 +89,7 @@ public class NCListBuilder<T extends IntervalI>
      * sort by start ascending, length descending, so that
      * contained intervals follow their containing interval
      */
-    Collections.sort(ranges, comparator);
+    Collections.sort(ranges, IntervalI.COMPARE_BEGIN_ASC_END_DESC);
   
     int listStartIndex = 0;
   
