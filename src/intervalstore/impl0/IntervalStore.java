@@ -274,7 +274,6 @@ public class IntervalStore<T extends IntervalI>
     return pp;
   }
 
-  @Override
   public boolean isValid()
   {
     for (int i = 0; i < nonNested.size() - 1; i++)
@@ -514,37 +513,10 @@ public class IntervalStore<T extends IntervalI>
   }
 
   @Override
-  public int getWidth()
-  {
-    return (nonNested == null ? 0 : nonNested.size())
-            + (nested == null ? 0 : nested.getWidth());
-  }
-
-  @Override
   public List<T> findOverlaps(long start, long end, List<T> result)
   {
     // TODO Auto-generated method stub
     return null;
-  }
-
-  @Override
-  public boolean revalidate()
-  {
-    // TODO Auto-generated method stub
-    return false;
-  }
-
-  @Override
-  public IntervalI get(int i)
-  {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  public boolean canCheckForDuplicates()
-  {
-    return false;
   }
 
   @Override

@@ -68,6 +68,10 @@ public class IntervalStore0<T extends IntervalI>
         extends AbstractCollection<T> implements IntervalStoreI<T>
 {
 
+  static int NOT_CONTAINED = Integer.MIN_VALUE;
+
+  static int CONTAINMENT_UNKNOWN = 0;
+
   /**
    * Search for the last interval that starts before or at the specified from/to
    * range and the first interval that starts after it. In the situation that
@@ -214,7 +218,7 @@ public class IntervalStore0<T extends IntervalI>
    *          whether or not to presort the list as additions are made
    * @param comparator
    *          IntervalI.COMPARATOR_LITTLEENDIAN or
-   *          IntervalI.COMPARATOR_BIGENDIAN, but this could also be one that
+   *          IntervalI.COMPARE_BEGIN_ASC_END_DESC, but this could also be one that
    *          sorts by description as well, for example.
    * @param bigendian
    *          true if the comparator sorts [10-30] before [10-20]
@@ -230,8 +234,8 @@ public class IntervalStore0<T extends IntervalI>
     }
     DO_PRESORT = presort;
     icompare = (comparator != null ? comparator
-            : bigendian ? IntervalI.COMPARATOR_BIGENDIAN
-                    : IntervalI.COMPARATOR_LITTLEENDIAN);
+            : bigendian ? IntervalI.COMPARE_BEGIN_ASC_END_DESC
+                    : IntervalI.COMPARE_BEGIN_ASC_END_ASC);
     this.bigendian = bigendian;
 
     if (DO_PRESORT && intervalCount > 1)
@@ -668,7 +672,6 @@ public class IntervalStore0<T extends IntervalI>
     return result;
   }
 
-  @Override
   public IntervalI get(int i)
   {
     if (i < 0 || i >= intervalCount + added)
@@ -692,7 +695,7 @@ public class IntervalStore0<T extends IntervalI>
       }
       index -= Math.abs(offsets[index]);
     }
-    return IntervalI.NOT_CONTAINED;
+    return NOT_CONTAINED;
   }
 
   @Override
@@ -708,7 +711,7 @@ public class IntervalStore0<T extends IntervalI>
     for (int i = 0; i < intervalCount; i++)
     {
       IntervalI element = intervals[i];
-      if (offsets[i] == IntervalI.NOT_CONTAINED)
+      if (offsets[i] == NOT_CONTAINED)
       {
         root = element;
       }
@@ -728,7 +731,6 @@ public class IntervalStore0<T extends IntervalI>
     return maxDepth;
   }
 
-  @Override
   public int getWidth()
   {
     ensureFinalized();
@@ -743,7 +745,6 @@ public class IntervalStore0<T extends IntervalI>
     return w;
   }
 
-  @Override
   public boolean isValid()
   {
     ensureFinalized();
@@ -792,7 +793,7 @@ public class IntervalStore0<T extends IntervalI>
       return;
     }
     maxEnd = intervals[0].getEnd();
-    offsets[0] = IntervalI.NOT_CONTAINED;
+    offsets[0] = NOT_CONTAINED;
     if (intervalCount == 1)
     {
       return;
@@ -806,7 +807,7 @@ public class IntervalStore0<T extends IntervalI>
       // System.out.println(sf + " is contained by "
       // + (index < 0 ? null : starts[index]));
 
-      offsets[i] = (index < 0 ? IntervalI.NOT_CONTAINED
+      offsets[i] = (index < 0 ? NOT_CONTAINED
               : isMonotonic ? index - i : i - index);
       isMonotonic = (sf.getEnd() > maxEnd);
       if (isMonotonic)
@@ -983,7 +984,6 @@ public class IntervalStore0<T extends IntervalI>
 
   }
 
-  @Override
   public boolean revalidate()
   {
     isTainted = true;
@@ -1046,7 +1046,6 @@ public class IntervalStore0<T extends IntervalI>
     return prettyPrint();
   }
 
-  @Override
   public boolean canCheckForDuplicates()
   {
     return true;

@@ -31,43 +31,78 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package intervalstore.api;
 
-import static org.testng.Assert.assertSame;
-
-import java.util.ArrayList;
-import java.util.List;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 import org.testng.annotations.Test;
 
 import intervalstore.impl.SimpleFeature;
 
-/**
- * Test for the static utility sort method of interface IntervalI
- * 
- * @author gmcarstairs
- */
 public class IntervalITest
 {
-  @Test(groups = "Functional")
-  public void testSortIntervals()
+  SimpleFeature sf(int from, int to, String desc)
   {
-    List<SimpleFeature> sfs = new ArrayList<>();
-    SimpleFeature sf1 = new SimpleFeature(30, 80, "Pfam");
-    sfs.add(sf1);
-    SimpleFeature sf2 = new SimpleFeature(40, 50, "Metal");
-    sfs.add(sf2);
-    SimpleFeature sf3 = new SimpleFeature(50, 60, "Helix");
-    sfs.add(sf3);
-  
-    // sort by end position descending
-    IntervalI.sortIntervals(sfs, false);
-    assertSame(sfs.get(0), sf1);
-    assertSame(sfs.get(1), sf3);
-    assertSame(sfs.get(2), sf2);
-  
-    // sort by start position ascending
-    IntervalI.sortIntervals(sfs, true);
-    assertSame(sfs.get(0), sf1);
-    assertSame(sfs.get(1), sf2);
-    assertSame(sfs.get(2), sf3);
+    return new SimpleFeature(from, to, desc);
+  }
+
+  @Test(groups = "Functional")
+  public void testEqualsInterval()
+  {
+    assertTrue(sf(30, 80, "Pfam").equalsInterval(sf(30, 80, "Pfam")));
+    assertTrue(sf(30, 80, "Pfam").equalsInterval(sf(30, 80, "Cath")));
+    assertFalse(sf(30, 80, "Pfam").equalsInterval(sf(30, 81, "Pfam")));
+    assertFalse(sf(30, 81, "Pfam").equalsInterval(sf(30, 80, "Pfam")));
+    assertFalse(sf(30, 80, "Pfam").equalsInterval(sf(29, 80, "Pfam")));
+    assertFalse(sf(29, 80, "Pfam").equalsInterval(sf(30, 80, "Pfam")));
+    assertFalse(sf(30, 80, "Pfam").equalsInterval(null));
+  }
+
+  @Test(groups = "Functional")
+  public void testContainsInterval()
+  {
+    assertTrue(sf(30, 80, "Pfam").containsInterval(sf(30, 80, "Pfam")));
+    assertTrue(sf(30, 80, "Pfam").containsInterval(sf(30, 79, "Pfam")));
+    assertTrue(sf(30, 80, "Pfam").containsInterval(sf(31, 80, "Pfam")));
+    assertTrue(sf(30, 80, "Pfam").containsInterval(sf(35, 40, "Cath")));
+    assertFalse(sf(30, 80, "Pfam").containsInterval(sf(20, 40, "Pfam")));
+    assertFalse(sf(30, 81, "Pfam").containsInterval(sf(40, 90, "Pfam")));
+    assertFalse(sf(30, 80, "Pfam").containsInterval(null));
+  }
+
+  @Test(groups = "Functional")
+  public void testProperlyContainsInterval()
+  {
+    assertFalse(sf(30, 80, "Pfam")
+            .properlyContainsInterval(sf(30, 80, "Pfam")));
+    assertTrue(sf(30, 80, "Pfam")
+            .properlyContainsInterval(sf(30, 79, "Pfam")));
+    assertTrue(sf(30, 80, "Pfam")
+            .properlyContainsInterval(sf(31, 80, "Pfam")));
+    assertTrue(sf(30, 80, "Pfam")
+            .properlyContainsInterval(sf(35, 40, "Cath")));
+    assertFalse(sf(30, 80, "Pfam")
+            .properlyContainsInterval(sf(20, 40, "Pfam")));
+    assertFalse(sf(30, 81, "Pfam")
+            .properlyContainsInterval(sf(40, 90, "Pfam")));
+    assertFalse(sf(30, 80, "Pfam").properlyContainsInterval(null));
+  }
+
+  @Test(groups = "Functional")
+  public void testOverlapsInterval()
+  {
+    // same
+    assertTrue(sf(30, 80, "Pfam").overlapsInterval(sf(30, 80, "Pfam")));
+    // overlap right
+    assertTrue(sf(30, 80, "Pfam").overlapsInterval(sf(80, 81, "Pfam")));
+    // overlap left
+    assertTrue(sf(30, 80, "Pfam").overlapsInterval(sf(21, 31, "Pfam")));
+    // this encloses that
+    assertTrue(sf(30, 80, "Pfam").overlapsInterval(sf(35, 40, "Cath")));
+    // that encloses this
+    assertTrue(sf(30, 80, "Pfam").overlapsInterval(sf(20, 90, "Pfam")));
+    // disjoint
+    assertFalse(sf(30, 81, "Pfam").overlapsInterval(sf(90, 100, "Pfam")));
+    // null
+    assertFalse(sf(30, 80, "Pfam").overlapsInterval(null));
   }
 }

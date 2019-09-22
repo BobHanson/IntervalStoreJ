@@ -970,7 +970,7 @@ public class ISLinkTimingTests
       {
         // just check the very last result, to save time
         int ntotal = result.size();
-        result.sort(IntervalI.COMPARATOR_BIGENDIAN);
+        result.sort(IntervalI.COMPARE_BEGIN_ASC_END_DESC);
         int hashcode = result.hashCode();
         if (hashcodes[j] == 0)
         {
@@ -993,12 +993,12 @@ public class ISLinkTimingTests
     {
     case MODE_INTERVAL_STORE_NCLIST0:
       System.out.println("# dimensions depth:" + store0.getDepth()
-              + " width:" + store0.getWidth() + "]");
+              + " width:?");
 
       break;
     case MODE_INTERVAL_STORE_NCLIST:
       System.out.println("# dimensions depth:" + store1.getDepth()
-              + " width:" + store1.getWidth() + "]");
+              + " width:?");
 
       break;
     case MODE_INTERVAL_STORE_LINK:

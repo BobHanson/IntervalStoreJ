@@ -37,7 +37,6 @@ import static org.testng.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
@@ -66,8 +65,6 @@ public class NCListRandomisedTest
    */
   private Random random = new Random(107);
 
-  private Comparator<? super IntervalI> sorter = IntervalI.COMPARATOR_BIGENDIAN;
-
   /**
    * Provides the scales for pseudo-random NCLists i.e. the range of the maximal
    * [0-scale] interval to be stored
@@ -93,7 +90,7 @@ public class NCListRandomisedTest
      * sort the list of added ranges - this doesn't affect the test,
      * just makes it easier to inspect the data in the debugger
      */
-    Collections.sort(features, sorter);
+    Collections.sort(features, IntervalI.COMPARE_BEGIN_ASC_END_DESC);
 
     testFindOverlaps_pseudoRandom(ncl, scale, features);
 

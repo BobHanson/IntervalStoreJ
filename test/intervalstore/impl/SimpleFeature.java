@@ -36,11 +36,13 @@ import intervalstore.api.IntervalI;
 /**
  * A simplified feature instance sufficient for unit test purposes
  */
-public class SimpleFeature extends Range
+public class SimpleFeature implements IntervalI
 {
+  final private int begin;
+
+  final private int end;
 
   private String description;
-
 
   /**
    * Constructor
@@ -51,7 +53,8 @@ public class SimpleFeature extends Range
    */
   public SimpleFeature(int from, int to, String desc)
   {
-    super(from, to);
+    begin = from;
+    end = to;
     description = desc;
   }
 
@@ -62,7 +65,19 @@ public class SimpleFeature extends Range
    */
   public SimpleFeature(SimpleFeature sf1)
   {
-    this(sf1.start, sf1.end, sf1.description);
+    this(sf1.begin, sf1.end, sf1.description);
+  }
+
+  @Override
+  public int getBegin()
+  {
+    return begin;
+  }
+
+  @Override
+  public int getEnd()
+  {
+    return end;
   }
 
   public String getDescription()
@@ -73,37 +88,36 @@ public class SimpleFeature extends Range
   @Override
   public int hashCode()
   {
-    return start + 37 * end
+    return begin + 37 * end
             + (description == null ? 0 : description.hashCode());
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    return (o != null && o instanceof SimpleFeature
-            && equalsInterval((SimpleFeature) o));
   }
 
   /**
    * Equals method that requires two instances to have the same description, as
-   * well as start and end position. Does not do a test for null
+   * well as start and end position.
    */
   @Override
-  public boolean equalsInterval(IntervalI o)
+  public boolean equals(Object obj)
   {
-    // must override equalsInterval, not equals
-    return (o != null && start == ((SimpleFeature) o).start
-            && end == ((SimpleFeature) o).end)
-            && (description == null
-                    ? ((SimpleFeature) o).description == null
-                    : description.equals(((SimpleFeature) o).description));
+    if (obj != null && obj instanceof SimpleFeature)
+    {
+      SimpleFeature o = (SimpleFeature) obj;
+      if (this.begin == o.begin && this.end == o.end)
+      {
+        if (this.description == null)
+        {
+          return o.description == null;
+        }
+        return this.description.equals(o.description);
+      }
+    }
+    return false;
   }
 
   @Override
   public String toString()
   {
-    return start + ":" + end + ":" + description;
+    return begin + ":" + end + ":" + description;
   }
-
 
 }

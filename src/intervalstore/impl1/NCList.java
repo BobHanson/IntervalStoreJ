@@ -202,7 +202,7 @@ public class NCList<T extends IntervalI> extends AbstractCollection<T>
      * sort by start ascending, length descending, so that
      * contained intervals follow their containing interval
      */
-    Collections.sort(ranges, IntervalI.COMPARATOR_BIGENDIAN);
+    Collections.sort(ranges, IntervalI.COMPARE_BEGIN_ASC_END_DESC);
 
     int listStartIndex = 0;
 

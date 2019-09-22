@@ -104,13 +104,17 @@ public class LoadTest1
             /*
              * end of chromosome - construct NCList for last chromosome
              */
-
+            @SuppressWarnings("unchecked")
+            int w = ((List<SimpleFeature>) PA.getValue(fs, "nonNested"))
+                    .size();
+            @SuppressWarnings("unchecked")
+            NCList<SimpleFeature> ncl = (NCList<SimpleFeature>) PA
+                    .getValue(fs, "nested");
             if ("2".equals(lastChr) || "5".equals(lastChr))
             {
               // System.out.println(ncl.prettyPrint());
             }
             int size = fs.size();
-            int w = fs.getWidth();
             String msg = String.format(
                     "chr%s size=%d, width=%d (%.1f%%), nested = %d, depth=%d",
                     lastChr, size, w, w * 100 / (float) size,
@@ -129,12 +133,16 @@ public class LoadTest1
         line = br.readLine();
       }
 
-      int w = fs.getWidth();
+      @SuppressWarnings("unchecked")
+      int w = ((List<SimpleFeature>) PA.getValue(fs, "nonNested")).size();
+      @SuppressWarnings("unchecked")
+      NCList<SimpleFeature> ncl = (NCList<SimpleFeature>) PA.getValue(fs,
+              "nested");
       int size = fs.size();
       String msg = String.format(
-              "chr%s size=%d, width=%d (%.1f%%), size = %d, depth=%d",
-              lastChr, size, w, w * 100 / (float) size, (size - w),
-              fs.getDepth());
+              "chr%s size=%d, width=%d (%.1f%%), nclSize = %d, ncldepth=%d",
+              lastChr, size, w, w * 100 / (float) size, ncl.size(),
+              ncl.getDepth());
       System.out.println(msg);
     }
 

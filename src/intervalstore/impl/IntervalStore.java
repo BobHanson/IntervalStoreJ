@@ -39,6 +39,7 @@ import java.util.NoSuchElementException;
 
 import intervalstore.api.IntervalI;
 import intervalstore.api.IntervalStoreI;
+import intervalstore.impl.BinarySearcher.Compare;
 
 /**
  * A collection class to store interval-associated data, with O(log N)
@@ -98,7 +99,6 @@ public class IntervalStore<T extends IntervalI>
               : (nestedIterator != null && nestedIterator.hasNext());
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public V next()
     {
@@ -176,17 +176,29 @@ public class IntervalStore<T extends IntervalI>
   }
 
   /**
-   * Adds one interval to the store.
+   * Adds one interval to the store. Answers true unless the feature is a
+   * duplicate (already contained), in which case it is not added.
    * 
    * @param interval
    */
   @Override
   public boolean add(T interval)
   {
+    return add(interval, true);
+  }
+
+  @Override
+  public boolean add(T interval, boolean allowDuplicates)
+  {
     if (interval == null)
     {
       return false;
     }
+    if (!allowDuplicates && contains(interval))
+    {
+      return false;
+    }
+
     if (!addNonNestedInterval(interval))
     {
       /*
@@ -215,9 +227,8 @@ public class IntervalStore<T extends IntervalI>
       /*
        * find the first stored interval which doesn't precede the new one
        */
-      int insertPosition = BinarySearcher.findFirst(nonNested,
-              entry.getBegin(),
-              BinarySearcher.fbegin);
+      int insertPosition = BinarySearcher.findFirst(nonNested, true,
+              Compare.GE, entry.getBegin());
       /*
        * fail if we detect interval enclosure 
        * - of the new interval by the one before or after it
@@ -225,8 +236,7 @@ public class IntervalStore<T extends IntervalI>
        */
       if (insertPosition > 0)
       {
-        if (nonNested.get(insertPosition - 1)
-                .properlyContainsInterval(entry))
+        if (nonNested.get(insertPosition - 1).properlyContainsInterval(entry))
         {
           return false;
         }
@@ -253,7 +263,16 @@ public class IntervalStore<T extends IntervalI>
   @Override
   public List<T> findOverlaps(long from, long to)
   {
-    List<T> result = new ArrayList<>();
+    return findOverlaps(from, to, new ArrayList<>());
+  }
+
+  @Override
+  public List<T> findOverlaps(long from, long to, List<T> result)
+  {
+    if (result == null)
+    {
+      result = new ArrayList<>();
+    }
 
     findNonNestedOverlaps(from, to, result);
 
@@ -271,12 +290,17 @@ public class IntervalStore<T extends IntervalI>
     String pp = nonNested.toString();
     if (nested != null)
     {
-      pp += '\n' + nested.prettyPrint();
+      pp += System.lineSeparator() + nested.prettyPrint();
     }
     return pp;
   }
 
-  @Override
+  /**
+   * Inspects the data store and answers true if it is validly constructed, else
+   * false. Provided for use in verification by test classes. *
+   * 
+   * @return
+   */
   public boolean isValid()
   {
     for (int i = 0; i < nonNested.size() - 1; i++)
@@ -360,14 +384,13 @@ public class IntervalStore<T extends IntervalI>
      * start position is not less than the target range start
      * (NB inequality test ensures the first match if any is found)
      */
-    int from = entry.getBegin();
-    int startIndex = BinarySearcher.findFirst(nonNested, from,
-            BinarySearcher.fbegin);
+    int startIndex = BinarySearcher.findFirst(nonNested, true, Compare.GE,
+            entry.getBegin());
 
     /*
      * traverse intervals to look for a match
      */
-
+    int from = entry.getBegin();
     int i = startIndex;
     int size = nonNested.size();
     while (i < size)
@@ -387,6 +410,10 @@ public class IntervalStore<T extends IntervalI>
     return false;
   }
 
+  /**
+   * Answers 0 if the store is empty, 1 if there are only top level intervals,
+   * else 1 plus the depth of the nested intervals (NCList)
+   */
   @Override
   public int getDepth()
   {
@@ -432,14 +459,13 @@ public class IntervalStore<T extends IntervalI>
     /*
      * locate the first entry in the list which does not precede the interval
      */
-    int from = interval.getBegin();
-    int pos = BinarySearcher.findFirst(intervals, from,
-            BinarySearcher.fbegin);
+    int pos = BinarySearcher.findFirst(intervals, true, Compare.GE,
+            interval.getBegin());
     int len = intervals.size();
     while (pos < len)
     {
       T sf = intervals.get(pos);
-      if (sf.getBegin() > from)
+      if (sf.getBegin() > interval.getBegin())
       {
         return false; // no match found
       }
@@ -486,19 +512,23 @@ public class IntervalStore<T extends IntervalI>
      * find the first interval whose end position is
      * after the target range start
      */
-    int startIndex = BinarySearcher.findFirst(nonNested, (int) from,
-            BinarySearcher.fend);
-    for (int i = startIndex, n = nonNested.size(); i < n; i++)
+    int startIndex = BinarySearcher.findFirst(nonNested, false, Compare.GE,
+            (int) from);
+
+    final int startIndex1 = startIndex;
+    int i = startIndex1;
+    while (i < nonNested.size())
     {
       T sf = nonNested.get(i);
       if (sf.getBegin() > to)
       {
         break;
       }
-      if (sf.getEnd() >= from)
+      if (sf.getBegin() <= to && sf.getEnd() >= from)
       {
         result.add(sf);
       }
+      i++;
     }
   }
 
@@ -508,48 +538,8 @@ public class IntervalStore<T extends IntervalI>
     String s = nonNested.toString();
     if (nested != null)
     {
-      s = s + '\n'// + System.lineSeparator()
-              + nested.toString();
+      s = s + System.lineSeparator() + nested.toString();
     }
     return s;
-  }
-
-  @Override
-  public int getWidth()
-  {
-    return (nonNested == null ? 0 : nonNested.size())
-            + (nested == null ? 0 : nested.getWidth());
-  }
-
-  @Override
-  public List<T> findOverlaps(long start, long end, List<T> result)
-  {
-    return findOverlaps(start, end);
-  }
-
-  @Override
-  public boolean revalidate()
-  {
-    // not applicable
-    return true;
-  }
-
-  @Override
-  public IntervalI get(int i)
-  {
-    // not supported (but could be)
-    return null;
-  }
-
-  @Override
-  public boolean canCheckForDuplicates()
-  {
-    return false;
-  }
-
-  @Override
-  public boolean add(T interval, boolean checkForDuplicate)
-  {
-    return add(interval);
   }
 }
