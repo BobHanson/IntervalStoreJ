@@ -1048,7 +1048,7 @@ public class IntervalStore0<T extends IntervalI>
    * CAUTION! This presumes that equalsInterval does check descriptions. Note
    * that bartongroup.IntervalStoreJ does NOT do this and
    * jalview.datamodel.features.SequenceFeature does not, either. But
-   * nonc.SequenceFeature in test DOES do override equalsInterval.
+   * nonc.SimpleFeature in test DOES do override equalsInterval.
    * 
    * The reason we do it this way is to avoid an unnecessary and costly test for
    * obj instanceof IntervalI.
