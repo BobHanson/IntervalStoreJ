@@ -35,7 +35,6 @@ import java.util.Comparator;
 
 public interface IntervalI
 {
-
   /**
    * Compares intervals by start position ascending and end position descending
    */
